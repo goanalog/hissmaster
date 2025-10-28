@@ -1,6 +1,6 @@
-# Loop Portastudio
+# Tape Loop Architect
 
-A geometric browser instrument that fuses a four-track style mixer with an interactive tape-loop lab. Explore typology channels, tweak loop duration and transport speed, and visualize how ambient textures evolve.
+A lightweight web exploration of analog tape-loop concepts. Adjust loop duration and playback speed, browse non-skeuomorphic typologies, and survey creative tactics inspired by long-form tape manipulation.
 
 ## Getting started
 

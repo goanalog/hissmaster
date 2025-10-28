@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Loop Portastudio</title>
+    <title>Tape Loop Architect</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,205 +13,193 @@
     />
   </head>
   <body>
-    <div class="portastudio">
-      <header class="portastudio__header">
-        <div class="portastudio__title-block">
-          <h1>Loop Portastudio</h1>
-          <p>
-            A non-skeuomorphic homage to four-track decks where every control is
-            tuned for sculpting ambient tape loops, speed transformations, and
-            evolving textures.
-          </p>
-        </div>
-        <div class="portastudio__meter-bank" aria-hidden="true">
-          <div class="meter"></div>
-          <div class="meter"></div>
-          <div class="meter"></div>
-          <div class="meter"></div>
-        </div>
-      </header>
-
-      <div class="portastudio__body">
-        <section class="mixer" aria-labelledby="mixer-title">
-          <h2 id="mixer-title">Loop typology channels</h2>
-          <p class="mixer__intro">
-            Each channel reinterprets a classic loop behavior as if it were a
-            track strip on a recorder. Dial through them to plan the sonic
-            palette that will feed the tape bay.
-          </p>
-          <div class="channel-bank">
-            <article class="channel">
-              <header class="channel__header">
-                <span class="channel__badge">1</span>
-                <h3>Short Pulses</h3>
-              </header>
-              <p>
-                Rapid repetitions behave like percussion or pitched grains when
-                accelerated. Micro-variations in the recorded loop color the
-                resulting timbre.
-              </p>
-              <div class="channel__knobs" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="channel__fader" aria-hidden="true"></div>
-            </article>
-
-            <article class="channel">
-              <header class="channel__header">
-                <span class="channel__badge">2</span>
-                <h3>Phasing Drift</h3>
-              </header>
-              <p>
-                Run twin loops on separate decks and let speed tolerance shift
-                their sync. The result is a living polyrhythm that breathes and
-                recombines.
-              </p>
-              <div class="channel__knobs" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="channel__fader" aria-hidden="true"></div>
-            </article>
-
-            <article class="channel">
-              <header class="channel__header">
-                <span class="channel__badge">3</span>
-                <h3>Möbius Twist</h3>
-              </header>
-              <p>
-                Introduce a single half twist to double the journey. Audio plays
-                forward then returns in reverse with softened transients and
-                spectral blur.
-              </p>
-              <div class="channel__knobs" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="channel__fader" aria-hidden="true"></div>
-            </article>
-
-            <article class="channel">
-              <header class="channel__header">
-                <span class="channel__badge">4</span>
-                <h3>Long Ambience</h3>
-              </header>
-              <p>
-                Minutes-long paths hide repetition and encourage harmonic drift.
-                Ideal for installations where the loop becomes an environment.
-              </p>
-              <div class="channel__knobs" aria-hidden="true">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="channel__fader" aria-hidden="true"></div>
-            </article>
-          </div>
-
-          <div class="aux-bank">
-            <article class="aux">
-              <header>
-                <h3>Saturated Layers</h3>
-              </header>
-              <p>
-                Cover the erase head for sound-on-sound overdubs and drive the
-                input to bathe loops in compressed, harmonic warmth.
-              </p>
-            </article>
-            <article class="aux">
-              <header>
-                <h3>External Paths</h3>
-              </header>
-              <p>
-                Thread tape between distant reels for architectural-scale loops;
-                hand manipulations add scrubbing, smears, and tactile glitches.
-              </p>
-            </article>
-          </div>
-        </section>
-
-        <section class="tape-console" aria-labelledby="tape-console-title">
-          <div class="tape-console__top">
-            <h2 id="tape-console-title">Tape loop control bay</h2>
-            <div class="status-display">
-              <div class="status-display__cell">
-                <span class="status-display__label">Duration</span>
-                <output id="length-reading" aria-live="polite"></output>
-              </div>
-              <div class="status-display__cell">
-                <span class="status-display__label">Speed</span>
-                <output id="speed-reading" aria-live="polite"></output>
-              </div>
-              <div class="status-display__cell status-display__cell--wide">
-                <span class="status-display__label">Sonic profile</span>
-                <p id="sonic-profile"></p>
-              </div>
-            </div>
-          </div>
-
-          <div class="tape-bay" role="group" aria-label="Loop visualizer">
-            <svg
-              class="loop-visual"
-              viewBox="0 0 320 160"
-              role="img"
-              aria-labelledby="loop-visual-title loop-visual-desc"
-            >
-              <title id="loop-visual-title">Loop shape and density indicator</title>
-              <desc id="loop-visual-desc">
-                Animated visualization that responds to loop length and playback
-                speed, showing how density and pitch change.
-              </desc>
-              <defs>
-                <linearGradient id="loopGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="var(--accent)" />
-                  <stop offset="100%" stop-color="var(--accent-soft)" />
-                </linearGradient>
-              </defs>
-              <path class="loop-track" d="M 40 80 C 80 0, 240 0, 280 80 C 240 160, 80 160, 40 80 Z" />
-              <g class="loop-pulses"></g>
-            </svg>
-          </div>
-
-          <form class="transport-panel" aria-label="Loop settings">
-            <fieldset class="transport-panel__controls">
-              <legend>Loop sculpting</legend>
-              <label class="slider">
-                <span class="slider__label">Loop duration</span>
-                <input
-                  type="range"
-                  id="length-slider"
-                  min="1"
-                  max="180"
-                  value="8"
-                  aria-describedby="length-reading"
-                />
-              </label>
-              <label class="slider">
-                <span class="slider__label">Playback speed (ips)</span>
-                <input
-                  type="range"
-                  id="speed-slider"
-                  min="1.875"
-                  max="15"
-                  step="0.125"
-                  value="7.5"
-                  aria-describedby="speed-reading"
-                />
-              </label>
-            </fieldset>
-
-            <div class="transport" role="group" aria-label="Transport controls">
-              <button type="button" class="transport__key transport__key--record">
-                Record
-              </button>
-              <button type="button" class="transport__key">Rewind</button>
-              <button type="button" class="transport__key">Stop</button>
-              <button type="button" class="transport__key transport__key--primary">
-                Play
-              </button>
-              <button type="button" class="transport__key">Fast Fwd</button>
-            </div>
-          </form>
-        </section>
+    <header class="hero">
+      <div class="hero__content">
+        <h1>Tape Loop Architect</h1>
+        <p>
+          Explore how loop length, playback speed, and creative tactics sculpt the
+          sonic character of tape-based compositions.
+        </p>
       </div>
-    </div>
+      <div class="hero__visual" aria-hidden="true">
+        <div class="loop-grid">
+          <div class="loop-grid__item loop-grid__item--short"></div>
+          <div class="loop-grid__item loop-grid__item--medium"></div>
+          <div class="loop-grid__item loop-grid__item--long"></div>
+          <div class="loop-grid__item loop-grid__item--twist"></div>
+        </div>
+      </div>
+    </header>
 
-    <script src="script.js"></script>
+    <main>
+      <section class="panel" id="length-speed">
+        <div class="panel__intro">
+          <h2>Loop Length &amp; Speed</h2>
+          <p>
+            Adjust the loop duration and transport speed to reveal the transition
+            from percussive pulses to expansive soundscapes. Playback speed shifts
+            the pitch while stretching or contracting time.
+          </p>
+        </div>
+        <div class="panel__controls">
+          <div class="control">
+            <label for="length-slider">Loop duration</label>
+            <input
+              type="range"
+              id="length-slider"
+              min="1"
+              max="180"
+              value="8"
+              aria-describedby="length-reading"
+            />
+            <output id="length-reading" aria-live="polite"></output>
+          </div>
+          <div class="control">
+            <label for="speed-slider">Playback speed (ips)</label>
+            <input
+              type="range"
+              id="speed-slider"
+              min="1.875"
+              max="15"
+              step="0.125"
+              value="7.5"
+              aria-describedby="speed-reading"
+            />
+            <output id="speed-reading" aria-live="polite"></output>
+          </div>
+        </div>
+        <div class="panel__visual">
+          <svg
+            class="loop-visual"
+            viewBox="0 0 320 160"
+            role="img"
+            aria-labelledby="loop-visual-title loop-visual-desc"
+          >
+            <title id="loop-visual-title">Loop shape and density indicator</title>
+            <desc id="loop-visual-desc">
+              Animated visualization that responds to loop length and playback
+              speed, showing how density and pitch change.
+            </desc>
+            <defs>
+              <linearGradient id="loopGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="var(--accent)" />
+                <stop offset="100%" stop-color="var(--accent-soft)" />
+              </linearGradient>
+            </defs>
+            <path class="loop-track" d="M 40 80 C 80 0, 240 0, 280 80 C 240 160, 80 160, 40 80 Z" />
+            <g class="loop-pulses"></g>
+          </svg>
+          <div class="panel__summary">
+            <h3 id="sonic-profile-title">Sonic profile</h3>
+            <p id="sonic-profile"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel--grid" id="loop-typologies">
+        <h2>Loop Typologies</h2>
+        <p>
+          A non-skeuomorphic catalogue of tape-loop behaviors inspired by graphic
+          isometric forms and the attached reference image. Each card highlights a
+          distinctive sonic result.
+        </p>
+        <div class="card-grid">
+          <article class="card">
+            <div class="card__icon card__icon--pulse" aria-hidden="true"></div>
+            <h3>Short Pulses</h3>
+            <p>
+              Rapid repetitions become rhythmic grit or even continuous pitch when
+              accelerated. Micro-variations in the recorded material translate into
+              unique timbres at high speeds.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon card__icon--drift" aria-hidden="true"></div>
+            <h3>Phasing Drift</h3>
+            <p>
+              Multiple players running the same loop drift in and out of sync,
+              generating emergent polyrhythms and evolving textures reminiscent of
+              Steve Reich's process pieces.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon card__icon--twist" aria-hidden="true"></div>
+            <h3>Möbius Twist</h3>
+            <p>
+              A single twist doubles the journey, flipping the audio for a reversed
+              reprise. Expect softened transients and spectral smearing on the
+              mirrored pass.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon card__icon--ambient" aria-hidden="true"></div>
+            <h3>Long Ambience</h3>
+            <p>
+              Minutes-long paths reduce audible repetition, letting harmonics bloom
+              into slowly shifting soundscapes ideal for immersive installations.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon card__icon--saturation" aria-hidden="true"></div>
+            <h3>Saturated Layers</h3>
+            <p>
+              Cover the erase head for sound-on-sound recording and push the input
+              to bathe the loop in saturated harmonics and compressed sustain.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card__icon card__icon--external" aria-hidden="true"></div>
+            <h3>External Paths</h3>
+            <p>
+              Reroute tape between decks for architectural-scale loops. Hands-on
+              manipulation adds scrubbing, stretching, and tactile glitches.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" id="tactics">
+        <h2>Creative Tactics</h2>
+        <div class="timeline">
+          <article class="timeline__item">
+            <h3>Gapless Layering</h3>
+            <p>
+              Shield the erase head to keep layering new takes atop the loop.
+              Result: dense, evolving clouds without the abrupt reset of silence.
+            </p>
+          </article>
+          <article class="timeline__item">
+            <h3>Intentional Gaps</h3>
+            <p>
+              Leave the erase head active for a syncopated skip on each pass—a
+              built-in metronome that anchors rhythm-focused pieces.
+            </p>
+          </article>
+          <article class="timeline__item">
+            <h3>Manual Modulation</h3>
+            <p>
+              Touch or gently drag the tape to introduce wow, flutter, and gestural
+              bends that digital modulation struggles to match.
+            </p>
+          </article>
+          <article class="timeline__item">
+            <h3>Speed Sweeps</h3>
+            <p>
+              Ride the pitch control or apply subtle pressure to shape expressive
+              bends, sliding seamlessly between standard speed steps.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Inspired by analog tape experimentation—adjust the parameters and imagine
+        the evolving soundscapes they create.
+      </p>
+    </footer>
+
+    <script src="script.js" type="module"></script>
   </body>
 </html>

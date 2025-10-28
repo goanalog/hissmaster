@@ -1,8 +1,7 @@
-# Loop Portastudio
+# Tape Loop Architect
 
-A browser-based instrument that merges a four-track inspired console with a dedicated loop-programming tape deck. Each track strip
-introduces a different loop archetype while the central tape chamber renders the loop path, speed, and sonic character in real time.
+A lightweight web exploration of analog tape-loop concepts. Adjust loop duration and playback speed, browse non-skeuomorphic typologies, and survey creative tactics inspired by long-form tape manipulation.
 
 ## Getting started
 
-Open `index.html` in any modern browser. No build tools or runtime required.
+Open `index.html` in any modern browser. No build step required.

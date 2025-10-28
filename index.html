@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loop Portastudio Console</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="deckwork">
+      <header class="deckwork__mast">
+        <div class="mast__identity">
+          <span class="mast__badge">Loop Architect Lab</span>
+          <h1>Four-Track Loop Console</h1>
+          <p>
+            A non-skeuomorphic workstation that fuses four track strips with a
+            programmable tape deck. Sculpt loop length, speed, and texture
+            inside the cassette bay while each strip suggests a complementary
+            ambient tactic.
+          </p>
+        </div>
+        <div class="mast__meters" aria-hidden="true">
+          <div class="meter-card">
+            <span>TRK 1</span>
+            <div class="meter-card__bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="meter-card">
+            <span>TRK 2</span>
+            <div class="meter-card__bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="meter-card">
+            <span>TRK 3</span>
+            <div class="meter-card__bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+          <div class="meter-card">
+            <span>TRK 4</span>
+            <div class="meter-card__bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="deckwork__main">
+        <section class="channels" aria-labelledby="channels-title">
+          <div class="channels__heading">
+            <h2 id="channels-title">Channel strips</h2>
+            <p>
+              Route each archetype into the loop deck. Treat the strips as a
+              palette for layering textures before they hit the tape.
+            </p>
+          </div>
+          <div class="channels__grid">
+            <article class="strip">
+              <header class="strip__header">
+                <span class="strip__label">Track 1</span>
+                <span class="strip__mode">Pulse Microloops</span>
+              </header>
+              <p>
+                Ultra-short grains at hot speed settings blur into playable
+                tones. Great for shimmering percussion and glittering beds.
+              </p>
+              <div class="strip__meter" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="strip__knobs" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <footer class="strip__footer">
+                <span>Send ➜ tape chamber</span>
+                <div class="strip__fader" aria-hidden="true"><i></i></div>
+              </footer>
+            </article>
+
+            <article class="strip">
+              <header class="strip__header">
+                <span class="strip__label">Track 2</span>
+                <span class="strip__mode">Phase Drift Twins</span>
+              </header>
+              <p>
+                Double the source on two loops and let the tolerance drift into
+                polyrhythmic pulses that float around the stereo image.
+              </p>
+              <div class="strip__meter" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="strip__knobs" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <footer class="strip__footer">
+                <span>Send ➜ tape chamber</span>
+                <div class="strip__fader" aria-hidden="true"><i></i></div>
+              </footer>
+            </article>
+
+            <article class="strip">
+              <header class="strip__header">
+                <span class="strip__label">Track 3</span>
+                <span class="strip__mode">Möbius Voyage</span>
+              </header>
+              <p>
+                Add a twist to double runtime. The second lap plays in reverse,
+                softening attacks and tucking harmonics behind a hazy tail.
+              </p>
+              <div class="strip__meter" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="strip__knobs" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <footer class="strip__footer">
+                <span>Send ➜ tape chamber</span>
+                <div class="strip__fader" aria-hidden="true"><i></i></div>
+              </footer>
+            </article>
+
+            <article class="strip">
+              <header class="strip__header">
+                <span class="strip__label">Track 4</span>
+                <span class="strip__mode">Cathedral Ambience</span>
+              </header>
+              <p>
+                Monument-length loops hide repetition. Let harmonic drift and
+                slow modulations evolve for immersive installations.
+              </p>
+              <div class="strip__meter" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="strip__knobs" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <footer class="strip__footer">
+                <span>Send ➜ tape chamber</span>
+                <div class="strip__fader" aria-hidden="true"><i></i></div>
+              </footer>
+            </article>
+          </div>
+        </section>
+
+        <section class="transport-bay" aria-labelledby="deck-title">
+          <div class="transport-bay__shell">
+            <header class="transport-bay__header">
+              <div>
+                <h2 id="deck-title">Loop deck</h2>
+                <p>
+                  Program loop length and playback speed. The cassette chamber
+                  visualises density and motion so you can audition textures on
+                  the fly.
+                </p>
+              </div>
+              <div class="status-lights" aria-hidden="true">
+                <span class="status-lights__led status-lights__led--on">ready</span>
+                <span class="status-lights__led">monitor</span>
+                <span class="status-lights__led">dub</span>
+              </div>
+            </header>
+
+            <div class="cassette">
+              <div class="cassette__spool cassette__spool--left" aria-hidden="true">
+                <div class="spool"><span class="spool__hub"></span><span class="spool__ring"></span></div>
+              </div>
+              <div class="cassette__window" role="group" aria-label="Loop visualiser">
+                <svg
+                  class="loop-visual"
+                  viewBox="0 0 320 160"
+                  role="img"
+                  aria-labelledby="loop-visual-title loop-visual-desc"
+                >
+                  <title id="loop-visual-title">Loop density indicator</title>
+                  <desc id="loop-visual-desc">
+                    Animated loop path and pulse rings that respond to loop
+                    duration and transport speed.
+                  </desc>
+                  <defs>
+                    <linearGradient id="loopGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="var(--accent)" />
+                      <stop offset="100%" stop-color="var(--accent-soft)" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    class="loop-track"
+                    d="M 40 80 C 92 12, 228 12, 280 80 C 228 148, 92 148, 40 80 Z"
+                  />
+                  <g class="loop-pulses"></g>
+                </svg>
+              </div>
+              <div class="cassette__spool cassette__spool--right" aria-hidden="true">
+                <div class="spool"><span class="spool__hub"></span><span class="spool__ring"></span></div>
+              </div>
+            </div>
+
+            <div class="deck-readout">
+              <div class="readout">
+                <span class="readout__label">Duration</span>
+                <output id="length-reading" aria-live="polite"></output>
+              </div>
+              <div class="readout">
+                <span class="readout__label">Speed</span>
+                <output id="speed-reading" aria-live="polite"></output>
+              </div>
+              <div class="readout readout--wide">
+                <span class="readout__label">Sonic profile</span>
+                <p id="sonic-profile"></p>
+              </div>
+            </div>
+
+            <form class="deck-controls" aria-label="Loop sculpting controls">
+              <fieldset class="deck-controls__fieldset">
+                <legend>Loop sculpting</legend>
+                <label class="slider">
+                  <span class="slider__label">Loop duration</span>
+                  <input
+                    type="range"
+                    id="length-slider"
+                    min="1"
+                    max="180"
+                    value="8"
+                    aria-describedby="length-reading"
+                  />
+                </label>
+                <label class="slider">
+                  <span class="slider__label">Playback speed (ips)</span>
+                  <input
+                    type="range"
+                    id="speed-slider"
+                    min="1.875"
+                    max="15"
+                    step="0.125"
+                    value="7.5"
+                    aria-describedby="speed-reading"
+                  />
+                </label>
+              </fieldset>
+              <div class="transport" role="group" aria-label="Transport controls">
+                <button type="button" class="transport__key">Power</button>
+                <button type="button" class="transport__key">Rewind</button>
+                <button type="button" class="transport__key">Stop</button>
+                <button type="button" class="transport__key transport__key--primary">
+                  Play
+                </button>
+                <button type="button" class="transport__key">Record</button>
+                <button type="button" class="transport__key">Fast Fwd</button>
+              </div>
+            </form>
+
+            <div class="deck-recipes">
+              <article>
+                <h3>Ambient recipes</h3>
+                <ul>
+                  <li><strong>Deep Bloom:</strong> 90s @ 3.75ips ➜ evolving pads.</li>
+                  <li><strong>Shimmer Drift:</strong> 12s @ 9.5ips ➜ metallic choir.</li>
+                  <li><strong>Infinite Hiss:</strong> 45s @ 7.5ips ➜ warm drone bed.</li>
+                </ul>
+              </article>
+              <article>
+                <h3>Deck tactics</h3>
+                <ul>
+                  <li>Ride the speed slider for playable pitch bends.</li>
+                  <li>Layer overdubs with erase head masked.</li>
+                  <li>Route Track 2 + 3 into external loop for phasing.</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <aside class="loop-lab" aria-labelledby="lab-title">
+          <div class="loop-lab__heading">
+            <h2 id="lab-title">Loop design lab</h2>
+            <p>
+              Reference cards capture how duration, transport speed, and tactics
+              reshape the tape texture. Use them while programming the deck.
+            </p>
+          </div>
+          <div class="loop-lab__cards">
+            <article class="lab-card">
+              <h3>Loop length</h3>
+              <ul>
+                <li><strong>Micro (1–6s):</strong> Forms metallic drones and tonal pulses.</li>
+                <li><strong>Short (8–15s):</strong> Accentuates rhythm and repeating gestures.</li>
+                <li><strong>Long (45–180s):</strong> Masks repetition for evolving ambience.</li>
+              </ul>
+            </article>
+            <article class="lab-card">
+              <h3>Transport speed</h3>
+              <ul>
+                <li><strong>Fast:</strong> Raises pitch, intensifies wow/flutter artifacts.</li>
+                <li><strong>Slow:</strong> Drops pitch, accentuates tape wobble and bloom.</li>
+                <li><strong>Manual sway:</strong> Hands on reels for subtle bends.</li>
+              </ul>
+            </article>
+            <article class="lab-card">
+              <h3>Tape tactics</h3>
+              <ul>
+                <li>Cover erase head ➜ sound-on-sound saturation.</li>
+                <li>External paths ➜ exaggerated length + manual scrubbing.</li>
+                <li>Möbius twist ➜ doubled playback with reverse bloom.</li>
+              </ul>
+            </article>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

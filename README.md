@@ -13,10 +13,21 @@ virtual tape path respond in real time. Capture a quick idea directly from your 
   a synced delay line. Feedback blends back into the "tape" for proper echo build-up.
 - **Guide-induced flutter** – Every extra guide post subtly increases wow/flutter depth, mimicking the instability of long,
   friction-heavy tape paths.
-- **Closed-loop animation** – The tape ribbon now renders as a continuous loop with a directional shimmer and a glowing play-head
-  segment so you can see exactly which portion is sounding in forward or reverse motion.
-- **Tone shaping** – A single low-cut slider feeds a high-pass filter before the tape circuit, making it easy to tame rumble or
-  keep only the midrange grit from mic captures.
+- **Directional tape animation** – The tape ribbon renders as a continuous loop with a shimmering dash pattern, animated tracer
+  dots, and a bright play-head halo so you always see the speed and direction the tape is travelling.
+- **Tone & flutter shaping** – A low-cut slider feeds the high-pass stage and a dedicated wow/flutter control scales the
+  modulation depth so "more flutter" audibly delivers more wobble.
+
+### Tape head gaps & covering the erase head
+
+- **Erase → record gap** – On most cassette decks the tape hits the erase head first, then the record head. That physical gap
+  means a short strip of tape is wiped clean before new audio is laid down, which translates into a tiny silent splice each time
+  the loop comes back around.
+- **Record → play gap** – Three-head decks separate record and play heads, introducing a delay equal to the head spacing divided
+  by tape speed. This is the timing foundation the built-in echo control is modelling.
+- **Cover the erase head, not record** – When you mask the erase head with tape or foil you stop the wipe cycle, eliminating the
+  silent splice and enabling sound-on-sound overdubs. Covering the record head would simply prevent new material from ever
+  hitting the tape.
 
 ## Getting started
 

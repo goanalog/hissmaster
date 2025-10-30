@@ -29,6 +29,8 @@
               <path id="tapeBase" class="tape-base" d="" />
               <path id="tapeMotion" class="tape-motion" d="" />
               <path id="tapeActive" class="tape-active" d="" />
+              <g id="tapeDots"></g>
+              <circle id="playheadTracer" class="playhead-tracer" r="8" cx="-100" cy="-100" />
             </g>
             <g id="leftReel" transform="translate(275,130)">
               <circle class="reel" r="55" />
@@ -89,10 +91,14 @@
         </div>
 
         <div class="section-label">
-          <span>Low Cut</span>
-          <span id="toneCutLabel">90 Hz</span>
+          <span>Tone &amp; Flutter</span>
+          <span>colour the tape</span>
         </div>
-        <div class="tone-wrap">
+        <div class="tone-stack">
+          <label class="slider-label" for="toneCutRange">
+            low cut
+            <span id="toneCutLabel">90 Hz</span>
+          </label>
           <input
             id="toneCutRange"
             type="range"
@@ -100,6 +106,18 @@
             max="1000"
             step="1"
             value="90"
+          />
+          <label class="slider-label" for="flutterRange">
+            wow &amp; flutter
+            <span id="flutterLabel">100%</span>
+          </label>
+          <input
+            id="flutterRange"
+            type="range"
+            min="0"
+            max="2"
+            step="0.01"
+            value="1"
           />
         </div>
 

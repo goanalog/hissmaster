@@ -129,21 +129,38 @@ header h1 span {
 }
 
 .tape-motion {
-  stroke: rgba(245, 210, 122, 0.55);
-  stroke-width: 4;
-  filter: drop-shadow(0 0 6px rgba(245, 210, 122, 0.15));
-  stroke-dasharray: 40 26;
+  stroke: rgba(245, 210, 122, 0.65);
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 8px rgba(245, 210, 122, 0.22));
+  stroke-dasharray: 34 18;
   stroke-dashoffset: 0;
   mix-blend-mode: screen;
 }
 
 .tape-active {
   stroke: var(--accent);
-  stroke-width: 5;
+  stroke-width: 6;
   stroke-dasharray: 20 400;
   stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 8px var(--accent-glow));
+  filter: drop-shadow(0 0 12px var(--accent-glow));
   mix-blend-mode: screen;
+}
+
+#tapeDots circle {
+  fill: rgba(245, 210, 122, 0.85);
+  filter: drop-shadow(0 0 6px rgba(245, 210, 122, 0.35));
+  opacity: 0.9;
+  transition: opacity 120ms linear, r 120ms linear;
+}
+
+.playhead-tracer {
+  fill: rgba(245, 210, 122, 0.9);
+  stroke: rgba(0, 0, 0, 0.65);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 10px rgba(245, 210, 122, 0.65));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
 }
 
 .sprocket-hit {
@@ -296,19 +313,36 @@ header h1 span {
   color: var(--accent);
 }
 
-.tone-wrap {
+.tone-stack {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
 }
 
-.tone-wrap input[type="range"] {
-  width: 100%;
+.tone-stack input[type="range"] {
   accent-color: var(--accent);
 }
 
-#toneCutLabel {
-  font-variant-numeric: tabular-nums;
+.tone-stack .slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.tone-stack .slider-label span {
   color: var(--accent);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+#toneCutLabel,
+#flutterLabel {
+  font-variant-numeric: tabular-nums;
 }
 
 .file-block {

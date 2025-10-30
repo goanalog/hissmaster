@@ -114,11 +114,36 @@ header h1 span {
   stroke-linecap: round;
 }
 
-.tape-path {
-  stroke: var(--accent);
-  stroke-width: 3;
+.tape-base,
+.tape-motion,
+.tape-active {
   fill: none;
-  filter: drop-shadow(0 0 4px var(--accent-glow));
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.tape-base {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 7;
+}
+
+.tape-motion {
+  stroke: rgba(245, 210, 122, 0.55);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 6px rgba(245, 210, 122, 0.15));
+  stroke-dasharray: 40 26;
+  stroke-dashoffset: 0;
+  mix-blend-mode: screen;
+}
+
+.tape-active {
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-dasharray: 20 400;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+  mix-blend-mode: screen;
 }
 
 .sprocket-hit {
@@ -129,6 +154,12 @@ header h1 span {
   fill: #000;
   stroke: var(--accent);
   stroke-width: 2;
+}
+
+.sprocket-hit[data-type="leftReel"] .sprocket-body,
+.sprocket-hit[data-type="rightReel"] .sprocket-body {
+  stroke-width: 3;
+  stroke: rgba(245, 210, 122, 0.8);
 }
 
 .head-marker {
@@ -262,6 +293,21 @@ header h1 span {
 }
 
 .speed-readouts span {
+  color: var(--accent);
+}
+
+.tone-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.tone-wrap input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+#toneCutLabel {
+  font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
 

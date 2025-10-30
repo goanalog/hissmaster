@@ -20,12 +20,17 @@ let wetGain;
 let masterGain;
 let echoDelay;
 let echoFeedback;
+let highPass;
 
 const PX_PER_INCH = 5;
 const REFERENCE_SPEED_IPS = 7.5;
 const RECORD_HEAD_OFFSET_IN = 2.5;
 const MIN_HEAD_GAP_IN = 0.5;
 const BASE_WOW_DEPTH = 0.002;
+const DEFAULT_TONE_CUT_HZ = 90;
+const MIN_TONE_CUT_HZ = 20;
+const MAX_TONE_CUT_HZ = 1000;
+const FLUTTER_JITTER_MULT = 1800;
 
 let speedIPS = REFERENCE_SPEED_IPS;
 let loopLengthInches = 0;
@@ -34,8 +39,15 @@ let headDistanceInches = 12;
 let headDelaySeconds = 0;
 let recordHeadOffsetInches = RECORD_HEAD_OFFSET_IN;
 let currentPathPoints = [];
+let currentPathData = "";
 let recordHeadMarker;
 let playHeadMarker;
+let tapeTotalLengthPx = 0;
+let tapeDashSpacing = 66;
+let tapeDashOffset = 0;
+let tapeTravelInches = 0;
+let flutterPhase = 0;
+let toneCutHz = DEFAULT_TONE_CUT_HZ;
 
 function makeSaturationCurve(amount = 2.0, n = 1024) {
   const curve = new Float32Array(n);
@@ -62,6 +74,10 @@ function setupAudioGraph() {
   waveshaper = audioCtx.createWaveShaper();
   waveshaper.curve = makeSaturationCurve(2.5);
   waveshaper.oversample = "2x";
+
+  highPass = audioCtx.createBiquadFilter();
+  highPass.type = "highpass";
+  highPass.frequency.value = toneCutHz;
 
   wowDelay = audioCtx.createDelay();
   wowDelay.delayTime.value = 0.005;
@@ -94,6 +110,7 @@ function setupAudioGraph() {
   gainNode = audioCtx.createGain();
   gainNode.gain.value = 0.8;
 
+  highPass.connect(waveshaper);
   waveshaper.connect(biquadShelf);
   biquadShelf.connect(highCut);
   highCut.connect(wowDelay);
@@ -115,6 +132,7 @@ function setupAudioGraph() {
   updateFeedbackGain();
   updateSignalColor();
   updateWowFlutter();
+  updateToneCut();
 }
 
 function startSource(playRev = false) {
@@ -150,7 +168,11 @@ function startSource(playRev = false) {
 
   sourceNode.playbackRate.value = playbackRate;
   sourceNode.loop = true;
-  sourceNode.connect(waveshaper);
+  if (highPass) {
+    sourceNode.connect(highPass);
+  } else {
+    sourceNode.connect(waveshaper);
+  }
   sourceNode.start();
   return true;
 }
@@ -189,6 +211,8 @@ const feedbackRange = document.getElementById("feedbackRange");
 const feedbackVal = document.getElementById("feedbackVal");
 const headDelayEl = document.getElementById("headDelay");
 const wowBiasEl = document.getElementById("wowBias");
+const toneCutRange = document.getElementById("toneCutRange");
+const toneCutLabel = document.getElementById("toneCutLabel");
 
 function updateTransportUI() {
   btnPlay.dataset.state = playing && !reverseMode ? "active" : "";
@@ -367,10 +391,22 @@ if (feedbackRange) {
   });
 }
 
+if (toneCutRange) {
+  toneCutRange.addEventListener("input", () => {
+    const val = parseFloat(toneCutRange.value);
+    if (!Number.isNaN(val)) {
+      toneCutHz = Math.min(MAX_TONE_CUT_HZ, Math.max(MIN_TONE_CUT_HZ, val));
+      updateToneCut();
+    }
+  });
+}
+
 const svg = document.getElementById("cassetteSVG");
 const leftReel = document.getElementById("leftReel");
 const rightReel = document.getElementById("rightReel");
-const tapePathEl = document.getElementById("tapePath");
+const tapeBasePath = document.getElementById("tapeBase");
+const tapeMotionPath = document.getElementById("tapeMotion");
+const tapeActivePath = document.getElementById("tapeActive");
 const sprocketLayer = document.getElementById("sprocketLayer");
 const headLayer = document.getElementById("headLayer");
 
@@ -407,13 +443,38 @@ if (headLayer) {
 }
 
 let sprockets = [
-  { x: 275, y: 130, fixed: true },
-  { x: 525, y: 130, fixed: true },
+  { id: "leftReel", x: 275, y: 130, locked: true },
+  { id: "rightReel", x: 525, y: 130, locked: true },
 ];
 
 let lastTime = null;
 let leftAngle = 0;
 let rightAngle = 0;
+
+function getLeftReel() {
+  return sprockets.find((sp) => sp.id === "leftReel");
+}
+
+function getRightReel() {
+  return sprockets.find((sp) => sp.id === "rightReel");
+}
+
+function updateReelTransforms() {
+  const left = getLeftReel();
+  const right = getRightReel();
+  if (left && leftReel) {
+    leftReel.setAttribute(
+      "transform",
+      `translate(${left.x},${left.y}) rotate(${leftAngle})`
+    );
+  }
+  if (right && rightReel) {
+    rightReel.setAttribute(
+      "transform",
+      `translate(${right.x},${right.y}) rotate(${rightAngle})`
+    );
+  }
+}
 
 function animateReels(ts) {
   if (lastTime === null) lastTime = ts;
@@ -426,8 +487,30 @@ function animateReels(ts) {
   leftAngle += dir * spinSpeed * dt;
   rightAngle -= dir * spinSpeed * dt;
 
-  leftReel.setAttribute("transform", `translate(275,130) rotate(${leftAngle})`);
-  rightReel.setAttribute("transform", `translate(525,130) rotate(${rightAngle})`);
+  const tapeSpeed = playing ? speedIPS : 0;
+  if (loopLengthInches > 0 && tapeSpeed !== 0) {
+    let advance = tapeTravelInches + tapeSpeed * dt * dir;
+    advance %= loopLengthInches;
+    if (advance < 0) advance += loopLengthInches;
+    tapeTravelInches = advance;
+  }
+
+  const pxStep = tapeSpeed * PX_PER_INCH * dt * dir;
+  if (tapeMotionPath) {
+    const spacing = tapeDashSpacing || 1;
+    tapeDashOffset = ((tapeDashOffset - pxStep) % spacing + spacing) % spacing;
+    tapeMotionPath.setAttribute("stroke-dashoffset", tapeDashOffset.toFixed(2));
+  }
+
+  const wowFrequency = wowOsc ? wowOsc.frequency.value : 0.6;
+  const flutterDrive = playing ? wowFrequency : wowFrequency * 0.15;
+  flutterPhase += 2 * Math.PI * flutterDrive * dt;
+  if (flutterPhase > Math.PI * 2) {
+    flutterPhase -= Math.PI * 2;
+  }
+
+  updateActiveTapeSegment();
+  updateReelTransforms();
 
   requestAnimationFrame(animateReels);
 }
@@ -435,19 +518,38 @@ function animateReels(ts) {
 requestAnimationFrame(animateReels);
 
 function redrawTapePath() {
+  const left = getLeftReel();
+  const right = getRightReel();
   const core = sprockets
-    .filter((s) => !s.fixed)
-    .sort((a, b) => a.x - b.x);
+    .filter((sp) => sp !== left && sp !== right)
+    .sort((a, b) => a.x - b.x || a.y - b.y);
 
-  const left = sprockets.find((s) => s.x === 275 && s.y === 130);
-  const right = sprockets.find((s) => s.x === 525 && s.y === 130);
+  const ordered = [left, ...core, right].filter(Boolean);
 
-  const full = [left, ...core, right].filter(Boolean);
+  currentPathPoints = ordered.map((p) => ({ x: p.x, y: p.y }));
 
-  currentPathPoints = full.map((p) => ({ x: p.x, y: p.y }));
+  if (ordered.length >= 2) {
+    let pathData = `M ${ordered[0].x} ${ordered[0].y}`;
+    for (let i = 1; i < ordered.length; i += 1) {
+      pathData += ` L ${ordered[i].x} ${ordered[i].y}`;
+    }
+    pathData += " Z";
+    currentPathData = pathData;
+  } else {
+    currentPathData = "";
+  }
 
-  const pts = currentPathPoints.map((p) => `${p.x},${p.y}`).join(" ");
-  tapePathEl.setAttribute("points", pts);
+  if (tapeBasePath) {
+    tapeBasePath.setAttribute("d", currentPathData);
+  }
+  if (tapeMotionPath) {
+    tapeMotionPath.setAttribute("d", currentPathData);
+  }
+  if (tapeActivePath) {
+    tapeActivePath.setAttribute("d", currentPathData);
+  }
+
+  updateReelTransforms();
   updateTapePhysics();
 }
 
@@ -456,9 +558,9 @@ redrawTapePath();
 function computePathLength(points) {
   if (!points || points.length < 2) return 0;
   let total = 0;
-  for (let i = 0; i < points.length - 1; i += 1) {
+  for (let i = 0; i < points.length; i += 1) {
     const a = points[i];
-    const b = points[i + 1];
+    const b = points[(i + 1) % points.length];
     total += Math.hypot(b.x - a.x, b.y - a.y);
   }
   return total;
@@ -479,11 +581,13 @@ function getPointAtInches(inches) {
   if (!currentPathPoints.length) return null;
   const totalPx = computePathLength(currentPathPoints);
   if (totalPx === 0) return currentPathPoints[0];
-  const targetPx = Math.min(Math.max(inches * PX_PER_INCH, 0), totalPx);
+
+  let targetPx = (inches * PX_PER_INCH) % totalPx;
+  if (targetPx < 0) targetPx += totalPx;
   let accum = 0;
-  for (let i = 0; i < currentPathPoints.length - 1; i += 1) {
+  for (let i = 0; i < currentPathPoints.length; i += 1) {
     const start = currentPathPoints[i];
-    const end = currentPathPoints[i + 1];
+    const end = currentPathPoints[(i + 1) % currentPathPoints.length];
     const seg = Math.hypot(end.x - start.x, end.y - start.y);
     if (accum + seg >= targetPx) {
       const t = seg === 0 ? 0 : (targetPx - accum) / seg;
@@ -508,6 +612,48 @@ function updateHeadMarkers() {
   const playPoint = getPointAtInches(recordHeadOffsetInches + headDistanceInches);
   positionHeadMarker(recordHeadMarker, recordPoint);
   positionHeadMarker(playHeadMarker, playPoint);
+}
+
+function updateActiveTapeSegment() {
+  if (!tapeActivePath || !currentPathPoints.length || !currentPathData) {
+    if (tapeActivePath) {
+      tapeActivePath.setAttribute("stroke-dasharray", "0 1");
+    }
+    return;
+  }
+
+  if (loopLengthInches <= 0 || tapeTotalLengthPx <= 0) {
+    tapeActivePath.setAttribute("stroke-dasharray", `0 ${tapeTotalLengthPx || 1}`);
+    tapeActivePath.setAttribute("stroke-dashoffset", "0");
+    return;
+  }
+
+  if (tapeTotalLengthPx <= 6) {
+    tapeActivePath.setAttribute("stroke-dasharray", `${tapeTotalLengthPx.toFixed(2)} 0.1`);
+    tapeActivePath.setAttribute("stroke-dashoffset", "0");
+    return;
+  }
+
+  const totalInches = loopLengthInches;
+  const playAhead = (recordHeadOffsetInches + headDistanceInches + tapeTravelInches) % totalInches;
+  const activeSpanInches = Math.max(totalInches * 0.06, 3);
+  const maxActivePx = Math.max(6, tapeTotalLengthPx - 0.5);
+  const activePx = Math.min(maxActivePx, activeSpanInches * PX_PER_INCH);
+  const remainder = Math.max(tapeTotalLengthPx - activePx, 0.001);
+
+  tapeActivePath.setAttribute(
+    "stroke-dasharray",
+    `${activePx.toFixed(2)} ${remainder.toFixed(2)}`
+  );
+
+  let offsetInches = playAhead - activeSpanInches / 2;
+  offsetInches %= totalInches;
+  if (offsetInches < 0) offsetInches += totalInches;
+
+  const flutterDepth = wowGain ? wowGain.gain.value : BASE_WOW_DEPTH;
+  const jitterPx = Math.sin(flutterPhase) * flutterDepth * FLUTTER_JITTER_MULT;
+  const offsetPx = offsetInches * PX_PER_INCH;
+  tapeActivePath.setAttribute("stroke-dashoffset", (-(offsetPx) + jitterPx).toFixed(2));
 }
 
 function updateSpeedUI() {
@@ -545,6 +691,20 @@ function updateFeedbackGain() {
   }
 }
 
+function updateToneCut() {
+  const clamped = Math.min(MAX_TONE_CUT_HZ, Math.max(MIN_TONE_CUT_HZ, toneCutHz));
+  toneCutHz = Math.round(clamped);
+  if (toneCutLabel) {
+    toneCutLabel.textContent = `${toneCutHz} Hz`;
+  }
+  if (toneCutRange && parseFloat(toneCutRange.value) !== toneCutHz) {
+    toneCutRange.value = toneCutHz.toString();
+  }
+  if (highPass) {
+    highPass.frequency.value = toneCutHz;
+  }
+}
+
 function updateSignalColor() {
   if (highCut) {
     const ratio = Math.max(playbackRate, 0.001);
@@ -567,15 +727,47 @@ function updateWowFlutter() {
     const guideFactor = Math.max(0, sprockets.length - 2) * 0.08;
     wowOsc.frequency.value = 0.6 + guideFactor + (1 - speedFactor) * 0.4;
   }
+  const depthRatio = newDepth / BASE_WOW_DEPTH;
+  if (tapeMotionPath) {
+    const width = 4 * Math.min(1.6, Math.max(0.7, depthRatio));
+    tapeMotionPath.setAttribute("stroke-width", width.toFixed(2));
+  }
+  if (tapeActivePath) {
+    const activeWidth = 5 * Math.min(1.5, Math.max(0.8, depthRatio));
+    tapeActivePath.setAttribute("stroke-width", activeWidth.toFixed(2));
+    tapeActivePath.style.opacity = Math.min(1, 0.6 + (depthRatio - 1) * 0.25);
+  }
 }
 
 function updateTapePhysics() {
   updateSpeedUI();
 
+  const prevLength = loopLengthInches || 0;
   const totalPx = computePathLength(currentPathPoints);
+  tapeTotalLengthPx = totalPx;
   loopLengthInches = totalPx / PX_PER_INCH;
   if (!Number.isFinite(loopLengthInches)) {
     loopLengthInches = 0;
+  }
+
+  if (tapeMotionPath) {
+    const segments = Math.max(currentPathPoints.length, 1);
+    const dashA = Math.max(18, Math.min(150, (tapeTotalLengthPx / segments) * 0.45));
+    const dashB = dashA * 0.7;
+    tapeDashSpacing = dashA + dashB;
+    tapeDashOffset = ((tapeDashOffset % tapeDashSpacing) + tapeDashSpacing) % tapeDashSpacing;
+    tapeMotionPath.setAttribute(
+      "stroke-dasharray",
+      `${dashA.toFixed(2)} ${dashB.toFixed(2)}`
+    );
+    tapeMotionPath.setAttribute("stroke-dashoffset", tapeDashOffset.toFixed(2));
+  }
+
+  if (loopLengthInches > 0 && prevLength > 0) {
+    const normalized = ((tapeTravelInches % prevLength) + prevLength) % prevLength;
+    tapeTravelInches = (normalized / prevLength) * loopLengthInches;
+  } else if (loopLengthInches <= 0) {
+    tapeTravelInches = 0;
   }
 
   const usableLength = Math.max(0, loopLengthInches - MIN_HEAD_GAP_IN);
@@ -631,6 +823,7 @@ function updateTapePhysics() {
   updateSignalColor();
   updateWowFlutter();
   updateHeadMarkers();
+  updateActiveTapeSegment();
 }
 
 let dragging = null;
@@ -638,6 +831,7 @@ let dragging = null;
 function createSprocketNode(sp) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   g.classList.add("sprocket-hit");
+  g.dataset.type = sp.id || "guide";
 
   const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   circ.setAttribute("r", "10");
@@ -652,7 +846,6 @@ function createSprocketNode(sp) {
   updatePos();
 
   g.addEventListener("pointerdown", (e) => {
-    if (sp.fixed) return;
     dragging = { sp, offsetX: e.clientX - sp.x, offsetY: e.clientY - sp.y };
     g.setPointerCapture(e.pointerId);
   });
@@ -689,6 +882,7 @@ function rebuildSprocketLayer() {
 }
 
 rebuildSprocketLayer();
+updateToneCut();
 
 const btnAddSprocket = document.getElementById("btnAddSprocket");
 const btnRemoveSprocket = document.getElementById("btnRemoveSprocket");
@@ -697,7 +891,7 @@ btnAddSprocket.addEventListener("click", () => {
   const sp = {
     x: 400 + (Math.random() * 80 - 40),
     y: 150 + (Math.random() * 40 - 20),
-    fixed: false,
+    locked: false,
   };
   sprockets.push(sp);
   rebuildSprocketLayer();
@@ -706,7 +900,7 @@ btnAddSprocket.addEventListener("click", () => {
 
 btnRemoveSprocket.addEventListener("click", () => {
   for (let i = sprockets.length - 1; i >= 0; i -= 1) {
-    if (!sprockets[i].fixed) {
+    if (!sprockets[i].locked) {
       sprockets.splice(i, 1);
       break;
     }

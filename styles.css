@@ -236,6 +236,30 @@ header h1 span {
   padding: 0.5rem 0.75rem;
 }
 
+.file-block button {
+  font-size: 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #333;
+  background: #111;
+  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: transform 0.08s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.file-block button:active {
+  transform: scale(0.97);
+}
+
+.file-block button[data-state="recording"] {
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 12px rgba(255, 77, 77, 0.35);
+}
+
 .sprocket-row {
   display: flex;
   gap: 0.5rem;

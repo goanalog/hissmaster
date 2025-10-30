@@ -4,6 +4,9 @@ let playing = false;
 let reverseMode = false;
 let playbackRate = 1.0;
 let audioBuffer = null;
+let micRecorder;
+let micStream;
+let micTimeout;
 
 let gainNode;
 let biquadShelf;
@@ -107,6 +110,44 @@ function stopSource() {
     }
     sourceNode = null;
   }
+
+  updatePos();
+
+  g.addEventListener("pointerdown", (e) => {
+    if (sp.fixed) return;
+    dragging = { sp, offsetX: e.clientX - sp.x, offsetY: e.clientY - sp.y };
+    g.setPointerCapture(e.pointerId);
+  });
+
+  g.addEventListener("pointermove", (e) => {
+    if (!dragging || dragging.sp !== sp) return;
+    sp.x = e.clientX - dragging.offsetX;
+    sp.y = e.clientY - dragging.offsetY;
+
+    if (sp.x < 150) sp.x = 150;
+    if (sp.x > 650) sp.x = 650;
+    if (sp.y < 70) sp.y = 70;
+    if (sp.y > 220) sp.y = 220;
+
+    updatePos();
+    redrawTapePath();
+  });
+
+  g.addEventListener("pointerup", () => {
+    dragging = null;
+  });
+
+  g.addEventListener("pointercancel", () => {
+    dragging = null;
+  });
+
+  sprocketLayer.appendChild(g);
+  sp._el = g;
+}
+
+function rebuildSprocketLayer() {
+  while (sprocketLayer.firstChild) sprocketLayer.removeChild(sprocketLayer.firstChild);
+  sprockets.forEach((sp) => createSprocketNode(sp));
 }
 
 const btnPlay = document.getElementById("btnPlay");
@@ -118,6 +159,7 @@ const statusText = document.getElementById("statusText");
 const dirText = document.getElementById("dirText");
 const fileInput = document.getElementById("fileInput");
 const sampleName = document.getElementById("sampleName");
+const btnMicSample = document.getElementById("btnMicSample");
 
 function updateTransportUI() {
   btnPlay.dataset.state = playing && !reverseMode ? "active" : "";
@@ -175,6 +217,111 @@ fileInput.addEventListener("change", async (e) => {
     }
   });
 });
+
+if (btnMicSample) {
+  const resetMicButton = () => {
+    btnMicSample.dataset.state = "";
+    btnMicSample.textContent = "sample mic";
+  };
+
+  btnMicSample.addEventListener("click", async () => {
+    if (micRecorder && micRecorder.state === "recording") {
+      micRecorder.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      sampleName.textContent = "mic unavailable";
+      return;
+    }
+
+    if (typeof MediaRecorder === "undefined") {
+      sampleName.textContent = "mic unsupported";
+      return;
+    }
+
+    setupAudioGraph();
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      sampleName.textContent = "mic blocked";
+      console.error("Microphone access denied", err);
+      return;
+    }
+
+    micStream = stream;
+    const chunks = [];
+
+    micRecorder = new MediaRecorder(stream);
+    micRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    });
+
+    micRecorder.addEventListener("stop", async () => {
+      const recorder = micRecorder;
+      if (micTimeout) {
+        clearTimeout(micTimeout);
+        micTimeout = null;
+      }
+
+      if (micStream) {
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+      }
+
+      const blob = chunks.length
+        ? new Blob(chunks, { type: (recorder && recorder.mimeType) || "audio/webm" })
+        : null;
+
+      resetMicButton();
+
+      try {
+        if (blob && audioCtx) {
+          const arrayBuffer = await blob.arrayBuffer();
+          audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          const stamp = new Date().toLocaleTimeString();
+          sampleName.textContent = `mic capture ${stamp}`;
+          if (playing) {
+            startSource(reverseMode);
+            updateTransportUI();
+          }
+        }
+      } catch (err) {
+        sampleName.textContent = "mic capture failed";
+        console.error("Failed decoding microphone capture", err);
+      } finally {
+        micRecorder = null;
+      }
+    });
+
+    micRecorder.addEventListener("error", (event) => {
+      resetMicButton();
+      sampleName.textContent = "mic error";
+      console.error("Recorder error", event.error);
+      if (micRecorder) {
+        micRecorder = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach((track) => track.stop());
+        micStream = null;
+      }
+    });
+
+    btnMicSample.dataset.state = "recording";
+    btnMicSample.textContent = "capturing… tap to stop";
+
+    micRecorder.start();
+    micTimeout = window.setTimeout(() => {
+      if (micRecorder && micRecorder.state === "recording") {
+        micRecorder.stop();
+      }
+    }, 4000);
+  });
+}
 
 const svg = document.getElementById("cassetteSVG");
 const leftReel = document.getElementById("leftReel");

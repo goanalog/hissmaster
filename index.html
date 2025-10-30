@@ -2,301 +2,181 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tape Loop Architect</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Tape Loop Lab</title>
     <link rel="stylesheet" href="styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
   </head>
   <body>
-    <div class="workstation">
-      <header class="workstation__header">
-        <div class="workstation__branding">
-          <span class="workstation__badge">Loop Architect Lab</span>
-          <h1>Four-Track Loop Portastudio</h1>
-          <p>
-            A composer's console where four-track workflow and experimental loop
-            design live inside the same deck. Program evolving textures while the
-            tape bay visualises duration, speed, and ambient character in real
-            time.
-          </p>
+    <header>
+      <h1>
+        Tape Loop Lab
+        <span>cassette-inspired live loop sandbox</span>
+      </h1>
+    </header>
+
+    <main class="workzone">
+      <section class="cassette-shell">
+        <div class="cassette-header">
+          <div>virtual cassette ✶ live path</div>
+          <div id="statusText">status: <span style="color:var(--accent)">stopped</span></div>
         </div>
-        <div class="workstation__meters" aria-hidden="true">
-          <div class="meter-stack">
-            <span>TRK 1</span>
-            <div class="meter-stack__bars">
-              <i></i><i></i><i></i><i></i><i></i>
-            </div>
-          </div>
-          <div class="meter-stack">
-            <span>TRK 2</span>
-            <div class="meter-stack__bars">
-              <i></i><i></i><i></i><i></i><i></i>
-            </div>
-          </div>
-          <div class="meter-stack">
-            <span>TRK 3</span>
-            <div class="meter-stack__bars">
-              <i></i><i></i><i></i><i></i><i></i>
-            </div>
-          </div>
-          <div class="meter-stack">
-            <span>TRK 4</span>
-            <div class="meter-stack__bars">
-              <i></i><i></i><i></i><i></i><i></i>
-            </div>
+        <div class="cassette-stage">
+          <svg id="cassetteSVG" viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="20" width="760" height="310" rx="16" ry="16" fill="#111" stroke="#444" stroke-width="3" />
+            <rect x="40" y="40" width="720" height="180" rx="8" ry="8" fill="#1a1a1a" stroke="#555" stroke-width="2" />
+            <rect x="200" y="70" width="400" height="120" rx="8" ry="8" fill="#0a0a0a" stroke="#777" stroke-width="2" />
+            <g id="tapeLayer">
+              <path id="tapeBase" class="tape-base" d="" />
+              <path id="tapeMotion" class="tape-motion" d="" />
+              <path id="tapeActive" class="tape-active" d="" />
+            </g>
+            <g id="leftReel" transform="translate(275,130)">
+              <circle class="reel" r="55" />
+              <circle class="reel-center" r="10" />
+              <line class="reel-arm" x1="0" y1="0" x2="0" y2="-45" />
+              <line class="reel-arm" x1="0" y1="0" x2="38.97" y2="22.5" />
+              <line class="reel-arm" x1="0" y1="0" x2="-38.97" y2="22.5" />
+            </g>
+            <g id="rightReel" transform="translate(525,130)">
+              <circle class="reel" r="55" />
+              <circle class="reel-center" r="10" />
+              <line class="reel-arm" x1="0" y1="0" x2="0" y2="-45" />
+              <line class="reel-arm" x1="0" y1="0" x2="38.97" y2="22.5" />
+              <line class="reel-arm" x1="0" y1="0" x2="-38.97" y2="22.5" />
+            </g>
+            <g id="sprocketLayer"></g>
+            <g id="headLayer"></g>
+          </svg>
+        </div>
+      </section>
+
+      <aside class="sidepanel">
+        <div class="section-label">
+          <span>Transport</span>
+          <span id="dirText">→ fwd</span>
+        </div>
+        <div class="transport-row">
+          <button class="btn-transport" id="btnPlay">PLAY</button>
+          <button class="btn-transport" id="btnStop">STOP</button>
+          <button class="btn-transport" id="btnReverse">REV</button>
+        </div>
+
+        <div class="section-label">
+          <span>Tape Speed</span>
+          <span id="speedMeta">7.50 ips</span>
+        </div>
+        <div class="speed-wrap">
+          <input
+            id="speedRange"
+            type="range"
+            min="1.875"
+            max="15"
+            step="0.125"
+            value="7.5"
+          />
+          <div class="speed-value">
+            <span id="speedVal">7.50</span>
+            <span class="speed-unit">ips</span>
           </div>
         </div>
-      </header>
-
-      <div class="workstation__grid">
-        <section class="console" aria-labelledby="console-title">
-          <div class="console__top">
-            <h2 id="console-title">Track console</h2>
-            <p>
-              Dial in the four loop archetypes like assigning instruments to
-              tracks. Each strip suggests how its source will behave once routed
-              into the tape chamber.
-            </p>
+        <div class="speed-readouts">
+          <div>
+            pitch shift: <span id="pitchShift">0.0</span> st
           </div>
-          <div class="console__channels">
-            <article class="track">
-              <header class="track__header">
-                <span class="track__label">Track 1</span>
-                <span class="track__mode">Pulse Microloops</span>
-              </header>
-              <p>
-                Ultra-short captures that blur into metallic grains when the deck
-                runs hot. Perfect for shimmering beds and percussive sparkles.
-              </p>
-              <div class="track__controls">
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-              </div>
-              <footer class="track__footer">
-                <span>Send ➜ tape</span>
-                <div class="track__fader" aria-hidden="true">
-                  <i></i>
-                </div>
-              </footer>
-            </article>
-
-            <article class="track">
-              <header class="track__header">
-                <span class="track__label">Track 2</span>
-                <span class="track__mode">Phase Drift Twins</span>
-              </header>
-              <p>
-                Pair matched loops on two decks and let tolerance drift create
-                ever-morphing polyrhythms that glide across the stereo field.
-              </p>
-              <div class="track__controls">
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-              </div>
-              <footer class="track__footer">
-                <span>Send ➜ tape</span>
-                <div class="track__fader" aria-hidden="true">
-                  <i></i>
-                </div>
-              </footer>
-            </article>
-
-            <article class="track">
-              <header class="track__header">
-                <span class="track__label">Track 3</span>
-                <span class="track__mode">Möbius Voyage</span>
-              </header>
-              <p>
-                Twist the loop for doubled runtime. The second half plays in
-                reverse, softening transients and tucking harmonics under a haze.
-              </p>
-              <div class="track__controls">
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-              </div>
-              <footer class="track__footer">
-                <span>Send ➜ tape</span>
-                <div class="track__fader" aria-hidden="true">
-                  <i></i>
-                </div>
-              </footer>
-            </article>
-
-            <article class="track">
-              <header class="track__header">
-                <span class="track__label">Track 4</span>
-                <span class="track__mode">Cathedral Ambience</span>
-              </header>
-              <p>
-                Monumental paths measured in minutes. Hide repetition and let
-                tonal drift unfold for installations and weightless pads.
-              </p>
-              <div class="track__controls">
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-                <div class="track__dial" aria-hidden="true"></div>
-              </div>
-              <footer class="track__footer">
-                <span>Send ➜ tape</span>
-                <div class="track__fader" aria-hidden="true">
-                  <i></i>
-                </div>
-              </footer>
-            </article>
+          <div>
+            loop repeats every <span id="loopDuration">0.00</span> s
           </div>
+        </div>
 
-          <div class="console__aux">
-            <article class="aux-card">
-              <h3>Sound-on-Sound Layers</h3>
-              <p>
-                Mask the erase head and keep overdubbing to build saturated
-                clusters with natural compression and harmonic bloom.
-              </p>
-            </article>
-            <article class="aux-card">
-              <h3>External Tape Paths</h3>
-              <p>
-                Stretch loops between distant reels, invite hand scrubbing, and
-                route the output back through the deck for infinite decay.
-              </p>
-            </article>
+        <div class="section-label">
+          <span>Low Cut</span>
+          <span id="toneCutLabel">90 Hz</span>
+        </div>
+        <div class="tone-wrap">
+          <input
+            id="toneCutRange"
+            type="range"
+            min="20"
+            max="1000"
+            step="1"
+            value="90"
+          />
+        </div>
+
+        <div class="section-label">
+          <span>Loop Physics</span>
+          <span id="pathSummary">0.0 in</span>
+        </div>
+        <div class="physics-grid">
+          <div class="metric-block">
+            <div class="metric-label">physical path</div>
+            <div class="metric-value" id="loopLength">0.0 in</div>
+            <div class="metric-note">drag posts to redraw</div>
           </div>
-        </section>
-
-        <section class="deck" aria-labelledby="deck-title">
-          <div class="deck__lid">
-            <h2 id="deck-title">Loop tape chamber</h2>
-            <p>
-              Everything from duration to playback speed is programmed here.
-              Watch the tape path animate while the LED readout reports the loop
-              character.
-            </p>
+          <div class="metric-block">
+            <div class="metric-label">guides engaged</div>
+            <div class="metric-value" id="sprocketCount">2</div>
+            <div class="metric-note">more = extra flutter</div>
           </div>
+        </div>
 
-          <div class="cassette">
-            <div class="cassette__spool cassette__spool--left" aria-hidden="true">
-              <div class="spool">
-                <span class="spool__hub"></span>
-                <span class="spool__ring"></span>
-              </div>
-            </div>
-            <div class="cassette__window" role="group" aria-label="Loop visualiser">
-              <svg
-                class="loop-visual"
-                viewBox="0 0 320 160"
-                role="img"
-                aria-labelledby="loop-visual-title loop-visual-desc"
-              >
-                <title id="loop-visual-title">Loop density indicator</title>
-                <desc id="loop-visual-desc">
-                  Animated path and pulse rings that respond to loop length and
-                  transport speed, showing how the texture evolves.
-                </desc>
-                <defs>
-                  <linearGradient id="loopGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="var(--accent)" />
-                    <stop offset="100%" stop-color="var(--accent-soft)" />
-                  </linearGradient>
-                </defs>
-                <path
-                  class="loop-track"
-                  d="M 40 80 C 90 12, 230 12, 280 80 C 230 148, 90 148, 40 80 Z"
-                />
-                <g class="loop-pulses"></g>
-              </svg>
-            </div>
-            <div class="cassette__spool cassette__spool--right" aria-hidden="true">
-              <div class="spool">
-                <span class="spool__hub"></span>
-                <span class="spool__ring"></span>
-              </div>
-            </div>
+        <div class="section-label">
+          <span>Audio Source</span>
+          <span id="sampleName">no sample</span>
+        </div>
+        <div class="file-block">
+          <input type="file" id="fileInput" accept="audio/*" />
+          <button type="button" id="btnMicSample">sample mic</button>
+        </div>
+
+        <div class="section-label">
+          <span>Tape Path</span>
+          <span><span style="color:var(--accent)">drag</span> nodes</span>
+        </div>
+        <div class="sprocket-row">
+          <button id="btnAddSprocket">+ add post</button>
+          <button id="btnRemoveSprocket" class="btn-danger">- remove last</button>
+        </div>
+
+        <div class="section-label">
+          <span>Heads &amp; Echo</span>
+          <span id="headDelaySummary">0.00 s</span>
+        </div>
+        <div class="head-controls">
+          <label class="slider-label" for="headDistanceRange">record → play distance</label>
+          <input
+            id="headDistanceRange"
+            type="range"
+            min="0"
+            max="36"
+            step="0.25"
+            value="12"
+          />
+          <div class="head-stats">
+            <span><span id="headDistanceVal">12.0</span> in</span>
+            <span>wow bias <span id="wowBias">1.0×</span></span>
           </div>
-
-          <div class="deck__readout">
-            <div class="readout">
-              <span class="readout__label">Duration</span>
-              <output id="length-reading" aria-live="polite"></output>
-            </div>
-            <div class="readout">
-              <span class="readout__label">Speed</span>
-              <output id="speed-reading" aria-live="polite"></output>
-            </div>
-            <div class="readout readout--wide">
-              <span class="readout__label">Sonic Profile</span>
-              <p id="sonic-profile"></p>
-            </div>
+          <label class="slider-label" for="feedbackRange">feedback</label>
+          <input
+            id="feedbackRange"
+            type="range"
+            min="0"
+            max="0.85"
+            step="0.01"
+            value="0.35"
+          />
+          <div class="head-stats">
+            <span>feedback <span id="feedbackVal">35%</span></span>
+            <span>delay <span id="headDelay">0.00</span> s</span>
           </div>
+        </div>
+      </aside>
+    </main>
 
-          <form class="deck__controls" aria-label="Loop sculpting controls">
-            <fieldset class="deck__fieldset">
-              <legend>Loop Sculpting</legend>
-              <label class="slider">
-                <span class="slider__label">Loop duration</span>
-                <input
-                  type="range"
-                  id="length-slider"
-                  min="1"
-                  max="180"
-                  value="8"
-                  aria-describedby="length-reading"
-                />
-              </label>
-              <label class="slider">
-                <span class="slider__label">Playback speed (ips)</span>
-                <input
-                  type="range"
-                  id="speed-slider"
-                  min="1.875"
-                  max="15"
-                  step="0.125"
-                  value="7.5"
-                  aria-describedby="speed-reading"
-                />
-              </label>
-            </fieldset>
-
-            <div class="transport" role="group" aria-label="Transport controls">
-              <button type="button" class="transport__key">Power</button>
-              <button type="button" class="transport__key">Rewind</button>
-              <button type="button" class="transport__key">Stop</button>
-              <button type="button" class="transport__key transport__key--primary">
-                Play
-              </button>
-              <button type="button" class="transport__key">Record</button>
-              <button type="button" class="transport__key">Fast Fwd</button>
-            </div>
-          </form>
-
-          <div class="deck__recipes">
-            <article>
-              <h3>Ambient recipes</h3>
-              <ul>
-                <li><strong>Deep Bloom:</strong> 90s @ 3.75ips ➜ evolving pads.</li>
-                <li><strong>Shimmer Drift:</strong> 12s @ 9.5ips ➜ metallic choir.</li>
-                <li><strong>Infinite Hiss:</strong> 45s @ 7.5ips ➜ warm drone bed.</li>
-              </ul>
-            </article>
-            <article>
-              <h3>Deck tactics</h3>
-              <ul>
-                <li>Ride the speed slider for playable pitch bends.</li>
-                <li>Layer overdubs with erase head masked.</li>
-                <li>Route Track 2 + 3 into external loop for phasing.</li>
-              </ul>
-            </article>
-          </div>
-        </section>
-      </div>
-    </div>
+    <footer>
+      Tape Loop Lab — play, reverse, stretch, and bruise audio like a cassette. This is an experiment.<br />
+      transport buttons glow when active • reels spin in sync • wow/flutter &amp; EQ give <span>warmth</span>
+    </footer>
 
     <script src="script.js"></script>
   </body>

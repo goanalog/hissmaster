@@ -65,7 +65,7 @@ function setupAudioGraph() {
 }
 
 function startSource(playRev = false) {
-  if (!audioBuffer || !audioCtx) return;
+  if (!audioBuffer || !audioCtx) return false;
 
   if (sourceNode) {
     try {
@@ -99,6 +99,7 @@ function startSource(playRev = false) {
   sourceNode.loop = true;
   sourceNode.connect(waveshaper);
   sourceNode.start();
+  return true;
 }
 
 function stopSource() {
@@ -110,44 +111,6 @@ function stopSource() {
     }
     sourceNode = null;
   }
-
-  updatePos();
-
-  g.addEventListener("pointerdown", (e) => {
-    if (sp.fixed) return;
-    dragging = { sp, offsetX: e.clientX - sp.x, offsetY: e.clientY - sp.y };
-    g.setPointerCapture(e.pointerId);
-  });
-
-  g.addEventListener("pointermove", (e) => {
-    if (!dragging || dragging.sp !== sp) return;
-    sp.x = e.clientX - dragging.offsetX;
-    sp.y = e.clientY - dragging.offsetY;
-
-    if (sp.x < 150) sp.x = 150;
-    if (sp.x > 650) sp.x = 650;
-    if (sp.y < 70) sp.y = 70;
-    if (sp.y > 220) sp.y = 220;
-
-    updatePos();
-    redrawTapePath();
-  });
-
-  g.addEventListener("pointerup", () => {
-    dragging = null;
-  });
-
-  g.addEventListener("pointercancel", () => {
-    dragging = null;
-  });
-
-  sprocketLayer.appendChild(g);
-  sp._el = g;
-}
-
-function rebuildSprocketLayer() {
-  while (sprocketLayer.firstChild) sprocketLayer.removeChild(sprocketLayer.firstChild);
-  sprockets.forEach((sp) => createSprocketNode(sp));
 }
 
 const btnPlay = document.getElementById("btnPlay");
@@ -176,16 +139,17 @@ function updateTransportUI() {
 btnPlay.addEventListener("click", () => {
   setupAudioGraph();
   reverseMode = false;
-  playing = true;
-  startSource(false);
+  playing = startSource(false);
   updateTransportUI();
 });
 
 btnReverse.addEventListener("click", () => {
   setupAudioGraph();
   reverseMode = true;
-  playing = true;
-  startSource(true);
+  playing = startSource(true);
+  if (!playing) {
+    reverseMode = false;
+  }
   updateTransportUI();
 });
 
@@ -212,7 +176,7 @@ fileInput.addEventListener("change", async (e) => {
   audioCtx.decodeAudioData(arrayBuf).then((buf) => {
     audioBuffer = buf;
     if (playing) {
-      startSource(reverseMode);
+      playing = startSource(reverseMode);
       updateTransportUI();
     }
   });
@@ -286,7 +250,7 @@ if (btnMicSample) {
           const stamp = new Date().toLocaleTimeString();
           sampleName.textContent = `mic capture ${stamp}`;
           if (playing) {
-            startSource(reverseMode);
+            playing = startSource(reverseMode);
             updateTransportUI();
           }
         }

@@ -13,8 +13,10 @@ virtual tape path respond in real time. Capture a quick idea directly from your 
   a synced delay line. Feedback blends back into the "tape" for proper echo build-up.
 - **Guide-induced flutter** – Every extra guide post subtly increases wow/flutter depth, mimicking the instability of long,
   friction-heavy tape paths.
-- **Rounded guide wraps** – The tape now hugs reels and posts with smooth arcs, so moving the default guides (or adding your own)
-  redraws the loop like the real cassette diagrams that inspired the lab.
+- **Tangential guide wraps** – The tape now hugs reels and posts with proper belt tangents, so nudging any guide or reel redraws
+  the loop like the real cassette diagrams that inspired the lab while recalculating loop length, head delay, and flutter depth.
+- **Click-to-add guides** – Tap directly on the illuminated tape run to drop a new guide between the two nearest posts; the loop
+  instantly re-routes around it and the physics/audio model updates with the longer path.
 - **Directional tape animation** – The tape ribbon renders as a continuous loop with a shimmering dash pattern, animated tracer
   dots, and a bright play-head halo so you always see the speed and direction the tape is travelling.
 - **Tone & flutter shaping** – A low-cut slider feeds the high-pass stage and a dedicated wow/flutter control scales the

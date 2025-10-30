@@ -114,6 +114,14 @@ header h1 span {
   stroke-linecap: round;
 }
 
+.tape-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 30;
+  pointer-events: stroke;
+  cursor: crosshair;
+}
+
 .tape-base,
 .tape-motion,
 .tape-active {

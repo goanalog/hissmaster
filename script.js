@@ -660,6 +660,104 @@ function updatePlayheadTracer() {
     playheadTracer.style.opacity = "0";
     return;
   }
+  if (toneCutRange && parseFloat(toneCutRange.value) !== toneCutHz) {
+    toneCutRange.value = toneCutHz.toString();
+  }
+  if (highPass) {
+    highPass.frequency.value = toneCutHz;
+  }
+}
+
+function updateSignalColor() {
+  if (highCut) {
+    const ratio = Math.max(playbackRate, 0.001);
+    const target = 8000 * Math.pow(ratio, 0.65);
+    highCut.frequency.value = Math.max(1500, Math.min(12000, target));
+  }
+}
+
+function updateWowFlutter() {
+  if (!wowGain) return;
+  const guideBonus = Math.max(0, sprockets.length - 2) * 0.0008;
+  const lengthBonus = loopLengthInches > 0 ? Math.min(0.003, (loopLengthInches / 120) * 0.0015) : 0;
+  const newDepth = BASE_WOW_DEPTH + guideBonus + lengthBonus;
+  wowGain.gain.value = newDepth;
+  if (wowBiasEl) {
+    wowBiasEl.textContent = `${(newDepth / BASE_WOW_DEPTH).toFixed(1)}×`;
+  }
+  if (wowOsc) {
+    const speedFactor = speedIPS / REFERENCE_SPEED_IPS;
+    const guideFactor = Math.max(0, sprockets.length - 2) * 0.08;
+    wowOsc.frequency.value = 0.6 + guideFactor + (1 - speedFactor) * 0.4;
+  }
+  const depthRatio = newDepth / BASE_WOW_DEPTH;
+  if (tapeMotionPath) {
+    const width = 4 * Math.min(1.6, Math.max(0.7, depthRatio));
+    tapeMotionPath.setAttribute("stroke-width", width.toFixed(2));
+  }
+  if (tapeActivePath) {
+    const activeWidth = 5 * Math.min(1.5, Math.max(0.8, depthRatio));
+    tapeActivePath.setAttribute("stroke-width", activeWidth.toFixed(2));
+    tapeActivePath.style.opacity = Math.min(1, 0.6 + (depthRatio - 1) * 0.25);
+  }
+}
+
+function updateTapePhysics() {
+  updateSpeedUI();
+
+  const prevLength = loopLengthInches || 0;
+  const totalPx = computePathLength(currentPathPoints);
+  tapeTotalLengthPx = totalPx;
+  loopLengthInches = totalPx / PX_PER_INCH;
+  if (!Number.isFinite(loopLengthInches)) {
+    loopLengthInches = 0;
+  }
+
+  if (tapeMotionPath) {
+    const segments = Math.max(currentPathPoints.length, 1);
+    const dashA = Math.max(18, Math.min(150, (tapeTotalLengthPx / segments) * 0.45));
+    const dashB = dashA * 0.7;
+    tapeDashSpacing = dashA + dashB;
+    tapeDashOffset = ((tapeDashOffset % tapeDashSpacing) + tapeDashSpacing) % tapeDashSpacing;
+    tapeMotionPath.setAttribute(
+      "stroke-dasharray",
+      `${dashA.toFixed(2)} ${dashB.toFixed(2)}`
+    );
+    tapeMotionPath.setAttribute("stroke-dashoffset", tapeDashOffset.toFixed(2));
+  }
+
+  if (loopLengthInches > 0 && prevLength > 0) {
+    const normalized = ((tapeTravelInches % prevLength) + prevLength) % prevLength;
+    tapeTravelInches = (normalized / prevLength) * loopLengthInches;
+  } else if (loopLengthInches <= 0) {
+    tapeTravelInches = 0;
+  }
+
+  const usableLength = Math.max(0, loopLengthInches - MIN_HEAD_GAP_IN);
+  recordHeadOffsetInches = Math.min(RECORD_HEAD_OFFSET_IN, usableLength);
+
+  const maxHeadDistance = Math.max(
+    0,
+    loopLengthInches - recordHeadOffsetInches - MIN_HEAD_GAP_IN
+  );
+
+  if (headDistanceRange) {
+    headDistanceRange.max = maxHeadDistance.toFixed(2);
+    headDistanceRange.disabled = maxHeadDistance <= 0.01;
+  }
+
+  if (maxHeadDistance <= 0.01) {
+    headDistanceInches = 0;
+  } else if (headDistanceInches > maxHeadDistance) {
+    headDistanceInches = maxHeadDistance;
+  }
+
+  if (headDistanceRange && !Number.isNaN(headDistanceInches)) {
+    headDistanceRange.value = headDistanceInches.toFixed(2);
+  }
+
+  loopDurationSeconds = loopLengthInches > 0 && speedIPS > 0 ? loopLengthInches / speedIPS : 0;
+  headDelaySeconds = headDistanceInches > 0 && speedIPS > 0 ? headDistanceInches / speedIPS : 0;
 
   playheadTracer.setAttribute("cx", point.x.toFixed(2));
   playheadTracer.setAttribute("cy", point.y.toFixed(2));

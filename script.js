@@ -110,6 +110,44 @@ function stopSource() {
     }
     sourceNode = null;
   }
+
+  updatePos();
+
+  g.addEventListener("pointerdown", (e) => {
+    if (sp.fixed) return;
+    dragging = { sp, offsetX: e.clientX - sp.x, offsetY: e.clientY - sp.y };
+    g.setPointerCapture(e.pointerId);
+  });
+
+  g.addEventListener("pointermove", (e) => {
+    if (!dragging || dragging.sp !== sp) return;
+    sp.x = e.clientX - dragging.offsetX;
+    sp.y = e.clientY - dragging.offsetY;
+
+    if (sp.x < 150) sp.x = 150;
+    if (sp.x > 650) sp.x = 650;
+    if (sp.y < 70) sp.y = 70;
+    if (sp.y > 220) sp.y = 220;
+
+    updatePos();
+    redrawTapePath();
+  });
+
+  g.addEventListener("pointerup", () => {
+    dragging = null;
+  });
+
+  g.addEventListener("pointercancel", () => {
+    dragging = null;
+  });
+
+  sprocketLayer.appendChild(g);
+  sp._el = g;
+}
+
+function rebuildSprocketLayer() {
+  while (sprocketLayer.firstChild) sprocketLayer.removeChild(sprocketLayer.firstChild);
+  sprockets.forEach((sp) => createSprocketNode(sp));
 }
 
 const btnPlay = document.getElementById("btnPlay");

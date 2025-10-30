@@ -646,6 +646,7 @@ function buildArcCommand(node, radius, entryAngle, exitAngle, orientation, exitP
   } else if (delta >= 0) {
     delta -= Math.PI * 2;
   }
+}
 
   if (Math.abs(delta) < 1e-4) {
     return {
@@ -1069,6 +1070,175 @@ function updateMotionDots(force = false) {
       circle.setAttribute("r", radius.toFixed(2));
     }
   }
+  if (pitchShiftEl) {
+    const semis = 12 * Math.log2(Math.max(playbackRate, 0.001));
+    const formatted = semis >= 0 ? `+${semis.toFixed(1)}` : semis.toFixed(1);
+    pitchShiftEl.textContent = formatted;
+  }
+}
+
+function updateHeadDelayNode() {
+  if (echoDelay) {
+    const clamped = Math.max(0, Math.min(29, headDelaySeconds));
+    echoDelay.delayTime.value = clamped;
+  }
+}
+
+function updateFeedbackGain() {
+  if (!feedbackRange) return;
+  const value = parseFloat(feedbackRange.value);
+  if (feedbackVal) {
+    feedbackVal.textContent = `${Math.round(value * 100)}%`;
+  }
+  if (echoFeedback) {
+    echoFeedback.gain.value = value;
+  }
+  if (wetGain) {
+    wetGain.gain.value = 0.25 + value * 0.55;
+  }
+}
+
+function updateToneCut() {
+  const clamped = Math.min(MAX_TONE_CUT_HZ, Math.max(MIN_TONE_CUT_HZ, toneCutHz));
+  toneCutHz = Math.round(clamped);
+  if (toneCutLabel) {
+    toneCutLabel.textContent = `${toneCutHz} Hz`;
+  }
+  if (toneCutRange && parseFloat(toneCutRange.value) !== toneCutHz) {
+    toneCutRange.value = toneCutHz.toString();
+  }
+  if (highPass) {
+    highPass.frequency.value = toneCutHz;
+  }
+}
+
+function updateSignalColor() {
+  if (highCut) {
+    const ratio = Math.max(playbackRate, 0.001);
+    const target = 8000 * Math.pow(ratio, 0.65);
+    highCut.frequency.value = Math.max(1500, Math.min(12000, target));
+  }
+}
+
+function updateWowFlutter() {
+  if (!wowGain) return;
+  const guideBonus = Math.max(0, sprockets.length - 2) * 0.0008;
+  const lengthBonus = loopLengthInches > 0 ? Math.min(0.003, (loopLengthInches / 120) * 0.0015) : 0;
+  const baseDepth = BASE_WOW_DEPTH + guideBonus + lengthBonus;
+  const newDepth = Math.max(0, baseDepth * flutterAmount);
+  wowGain.gain.value = newDepth;
+  if (wowBiasEl) {
+    const ratio = BASE_WOW_DEPTH === 0 ? 0 : newDepth / BASE_WOW_DEPTH;
+    wowBiasEl.textContent = `${ratio.toFixed(1)}×`;
+  }
+  if (wowOsc) {
+    const speedFactor = speedIPS / REFERENCE_SPEED_IPS;
+    const guideFactor = Math.max(0, sprockets.length - 2) * 0.08;
+    const baseFrequency = 0.6 + guideFactor + (1 - speedFactor) * 0.4;
+    const flutterShape = 0.45 + flutterAmount * 0.75;
+    wowOsc.frequency.value = Math.max(0.1, baseFrequency * flutterShape);
+  }
+  const depthRatio = BASE_WOW_DEPTH === 0 ? 0 : newDepth / BASE_WOW_DEPTH;
+  if (tapeMotionPath) {
+    const width = 4 * Math.min(1.75, Math.max(0.6, 0.6 + depthRatio));
+    tapeMotionPath.setAttribute("stroke-width", width.toFixed(2));
+  }
+  if (tapeActivePath) {
+    const activeWidth = 5.2 * Math.min(1.65, Math.max(0.75, 0.6 + depthRatio));
+    tapeActivePath.setAttribute("stroke-width", activeWidth.toFixed(2));
+    tapeActivePath.style.opacity = Math.min(1, 0.58 + depthRatio * 0.3);
+  }
+  updateMotionDots();
+}
+
+function updateTapePhysics() {
+  updateSpeedUI();
+
+  const prevLength = loopLengthInches || 0;
+  if (!Number.isFinite(tapeTotalLengthPx)) {
+    tapeTotalLengthPx = 0;
+  }
+  loopLengthInches = tapeTotalLengthPx / PX_PER_INCH;
+  if (!Number.isFinite(loopLengthInches)) {
+    loopLengthInches = 0;
+  }
+
+  if (tapeMotionPath) {
+    const segments = Math.max(currentPathPoints.length, 1);
+    const dashA = Math.max(18, Math.min(150, (tapeTotalLengthPx / segments) * 0.45));
+    const dashB = dashA * 0.7;
+    tapeDashSpacing = dashA + dashB;
+    tapeDashOffset = ((tapeDashOffset % tapeDashSpacing) + tapeDashSpacing) % tapeDashSpacing;
+    tapeMotionPath.setAttribute(
+      "stroke-dasharray",
+      `${dashA.toFixed(2)} ${dashB.toFixed(2)}`
+    );
+    tapeMotionPath.setAttribute("stroke-dashoffset", tapeDashOffset.toFixed(2));
+  }
+
+  if (loopLengthInches > 0 && prevLength > 0) {
+    const normalized = ((tapeTravelInches % prevLength) + prevLength) % prevLength;
+    tapeTravelInches = (normalized / prevLength) * loopLengthInches;
+  } else if (loopLengthInches <= 0) {
+    tapeTravelInches = 0;
+  }
+
+  const usableLength = Math.max(0, loopLengthInches - MIN_HEAD_GAP_IN);
+  recordHeadOffsetInches = Math.min(RECORD_HEAD_OFFSET_IN, usableLength);
+
+  const maxHeadDistance = Math.max(
+    0,
+    loopLengthInches - recordHeadOffsetInches - MIN_HEAD_GAP_IN
+  );
+
+  if (headDistanceRange) {
+    headDistanceRange.max = maxHeadDistance.toFixed(2);
+    headDistanceRange.disabled = maxHeadDistance <= 0.01;
+  }
+
+  if (maxHeadDistance <= 0.01) {
+    headDistanceInches = 0;
+  } else if (headDistanceInches > maxHeadDistance) {
+    headDistanceInches = maxHeadDistance;
+  }
+
+  if (headDistanceRange && !Number.isNaN(headDistanceInches)) {
+    headDistanceRange.value = headDistanceInches.toFixed(2);
+  }
+
+  loopDurationSeconds = loopLengthInches > 0 && speedIPS > 0 ? loopLengthInches / speedIPS : 0;
+  headDelaySeconds = headDistanceInches > 0 && speedIPS > 0 ? headDistanceInches / speedIPS : 0;
+
+  if (loopDurationEl) {
+    loopDurationEl.textContent = loopDurationSeconds.toFixed(2);
+  }
+  if (loopLengthEl) {
+    loopLengthEl.textContent = describeLength(loopLengthInches);
+  }
+  if (pathSummaryEl) {
+    pathSummaryEl.textContent = `${describeLength(loopLengthInches)} • ${loopDurationSeconds.toFixed(2)} s`;
+  }
+  if (sprocketCountEl) {
+    const guideCount = Math.max(0, sprockets.length - 2);
+    sprocketCountEl.textContent = String(guideCount);
+  }
+  if (headDistanceVal) {
+    headDistanceVal.textContent = headDistanceInches.toFixed(1);
+  }
+  if (headDelaySummary) {
+    headDelaySummary.textContent = `${headDelaySeconds.toFixed(2)} s`;
+  }
+  if (headDelayEl) {
+    headDelayEl.textContent = headDelaySeconds.toFixed(2);
+  }
+
+  updateHeadDelayNode();
+  updateFeedbackGain();
+  updateSignalColor();
+  updateWowFlutter();
+  updateHeadMarkers();
+  updateActiveTapeSegment();
+  updateMotionDots(true);
 }
 
 function updateFlutterUI() {

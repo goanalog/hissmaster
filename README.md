@@ -1,6 +1,6 @@
-# Tape Loop Architect
+# Tape Loop Lab
 
-A lightweight web exploration of analog tape-loop concepts. Adjust loop duration and playback speed, browse non-skeuomorphic typologies, and survey creative tactics inspired by long-form tape manipulation.
+A cassette-inspired loop sandbox. Load audio into the deck, adjust transport direction, speed, and routing posts, and watch the virtual tape path respond in real time.
 
 ## Getting started
 

@@ -41,6 +41,7 @@
               <line class="reel-arm" x1="0" y1="0" x2="-38.97" y2="22.5" />
             </g>
             <g id="sprocketLayer"></g>
+            <g id="headLayer"></g>
           </svg>
         </div>
       </section>
@@ -57,12 +58,47 @@
         </div>
 
         <div class="section-label">
-          <span>Speed</span>
-          <span>0.10× – 10×</span>
+          <span>Tape Speed</span>
+          <span id="speedMeta">7.50 ips</span>
         </div>
         <div class="speed-wrap">
-          <input id="speedRange" type="range" min="0.10" max="10" step="0.01" value="1.00" />
-          <div class="speed-value"><span id="speedVal">1.00</span>×</div>
+          <input
+            id="speedRange"
+            type="range"
+            min="1.875"
+            max="15"
+            step="0.125"
+            value="7.5"
+          />
+          <div class="speed-value">
+            <span id="speedVal">7.50</span>
+            <span class="speed-unit">ips</span>
+          </div>
+        </div>
+        <div class="speed-readouts">
+          <div>
+            pitch shift: <span id="pitchShift">0.0</span> st
+          </div>
+          <div>
+            loop repeats every <span id="loopDuration">0.00</span> s
+          </div>
+        </div>
+
+        <div class="section-label">
+          <span>Loop Physics</span>
+          <span id="pathSummary">0.0 in</span>
+        </div>
+        <div class="physics-grid">
+          <div class="metric-block">
+            <div class="metric-label">physical path</div>
+            <div class="metric-value" id="loopLength">0.0 in</div>
+            <div class="metric-note">drag posts to redraw</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-label">guides engaged</div>
+            <div class="metric-value" id="sprocketCount">2</div>
+            <div class="metric-note">more = extra flutter</div>
+          </div>
         </div>
 
         <div class="section-label">
@@ -81,6 +117,39 @@
         <div class="sprocket-row">
           <button id="btnAddSprocket">+ add post</button>
           <button id="btnRemoveSprocket" class="btn-danger">- remove last</button>
+        </div>
+
+        <div class="section-label">
+          <span>Heads &amp; Echo</span>
+          <span id="headDelaySummary">0.00 s</span>
+        </div>
+        <div class="head-controls">
+          <label class="slider-label" for="headDistanceRange">record → play distance</label>
+          <input
+            id="headDistanceRange"
+            type="range"
+            min="0"
+            max="36"
+            step="0.25"
+            value="12"
+          />
+          <div class="head-stats">
+            <span><span id="headDistanceVal">12.0</span> in</span>
+            <span>wow bias <span id="wowBias">1.0×</span></span>
+          </div>
+          <label class="slider-label" for="feedbackRange">feedback</label>
+          <input
+            id="feedbackRange"
+            type="range"
+            min="0"
+            max="0.85"
+            step="0.01"
+            value="0.35"
+          />
+          <div class="head-stats">
+            <span>feedback <span id="feedbackVal">35%</span></span>
+            <span>delay <span id="headDelay">0.00</span> s</span>
+          </div>
         </div>
       </aside>
     </main>

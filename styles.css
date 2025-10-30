@@ -131,6 +131,26 @@ header h1 span {
   stroke-width: 2;
 }
 
+.head-marker {
+  pointer-events: none;
+}
+
+.head-marker circle {
+  fill: var(--accent);
+  stroke: #000;
+  stroke-width: 2;
+  opacity: 0.9;
+}
+
+.head-marker text {
+  fill: #000;
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
 .sidepanel {
   background: var(--panel);
   border-radius: var(--radius-lg);
@@ -211,13 +231,38 @@ header h1 span {
 }
 
 .speed-value {
-  min-width: 4ch;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 5ch;
   color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-shadow: 0 0 6px var(--accent-glow);
+}
+
+.speed-value span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.speed-value .speed-unit {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--subtext);
+}
+
+.speed-readouts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  color: var(--subtext);
+  margin-top: 0.35rem;
+}
+
+.speed-readouts span {
+  color: var(--accent);
 }
 
 .file-block {
@@ -258,6 +303,83 @@ header h1 span {
   border-color: var(--danger);
   color: var(--danger);
   box-shadow: 0 0 12px rgba(255, 77, 77, 0.35);
+}
+
+.physics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .physics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.metric-block {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subtext);
+}
+
+.metric-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.metric-note {
+  font-size: 0.6rem;
+  color: var(--subtext);
+}
+
+.head-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+
+.head-controls input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.slider-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subtext);
+}
+
+.head-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--subtext);
+}
+
+.head-stats span {
+  color: var(--subtext);
+}
+
+.head-stats span span {
+  color: var(--accent);
 }
 
 .sprocket-row {

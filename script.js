@@ -14,6 +14,28 @@ let wowGain;
 let wowOsc;
 let wowDelay;
 let waveshaper;
+let highCut;
+let dryGain;
+let wetGain;
+let masterGain;
+let echoDelay;
+let echoFeedback;
+
+const PX_PER_INCH = 5;
+const REFERENCE_SPEED_IPS = 7.5;
+const RECORD_HEAD_OFFSET_IN = 2.5;
+const MIN_HEAD_GAP_IN = 0.5;
+const BASE_WOW_DEPTH = 0.002;
+
+let speedIPS = REFERENCE_SPEED_IPS;
+let loopLengthInches = 0;
+let loopDurationSeconds = 0;
+let headDistanceInches = 12;
+let headDelaySeconds = 0;
+let recordHeadOffsetInches = RECORD_HEAD_OFFSET_IN;
+let currentPathPoints = [];
+let recordHeadMarker;
+let playHeadMarker;
 
 function makeSaturationCurve(amount = 2.0, n = 1024) {
   const curve = new Float32Array(n);
@@ -33,7 +55,7 @@ function setupAudioGraph() {
   biquadShelf.frequency.value = 200;
   biquadShelf.gain.value = 3;
 
-  const highCut = audioCtx.createBiquadFilter();
+  highCut = audioCtx.createBiquadFilter();
   highCut.type = "lowpass";
   highCut.frequency.value = 8000;
 
@@ -45,7 +67,7 @@ function setupAudioGraph() {
   wowDelay.delayTime.value = 0.005;
 
   wowGain = audioCtx.createGain();
-  wowGain.gain.value = 0.002;
+  wowGain.gain.value = BASE_WOW_DEPTH;
 
   wowOsc = audioCtx.createOscillator();
   wowOsc.type = "sine";
@@ -54,14 +76,45 @@ function setupAudioGraph() {
   wowGain.connect(wowDelay.delayTime);
   wowOsc.start();
 
+  dryGain = audioCtx.createGain();
+  dryGain.gain.value = 0.85;
+
+  wetGain = audioCtx.createGain();
+  wetGain.gain.value = 0.45;
+
+  echoDelay = audioCtx.createDelay(30);
+  echoDelay.delayTime.value = headDelaySeconds;
+
+  echoFeedback = audioCtx.createGain();
+  echoFeedback.gain.value = 0.35;
+
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 1;
+
   gainNode = audioCtx.createGain();
   gainNode.gain.value = 0.8;
 
   waveshaper.connect(biquadShelf);
   biquadShelf.connect(highCut);
   highCut.connect(wowDelay);
-  wowDelay.connect(gainNode);
+
+  wowDelay.connect(dryGain);
+  dryGain.connect(masterGain);
+
+  wowDelay.connect(echoDelay);
+  echoDelay.connect(wetGain);
+  wetGain.connect(masterGain);
+
+  echoDelay.connect(echoFeedback);
+  echoFeedback.connect(echoDelay);
+
+  masterGain.connect(gainNode);
   gainNode.connect(audioCtx.destination);
+
+  updateHeadDelayNode();
+  updateFeedbackGain();
+  updateSignalColor();
+  updateWowFlutter();
 }
 
 function startSource(playRev = false) {
@@ -118,11 +171,24 @@ const btnStop = document.getElementById("btnStop");
 const btnReverse = document.getElementById("btnReverse");
 const speedRange = document.getElementById("speedRange");
 const speedVal = document.getElementById("speedVal");
+const speedMeta = document.getElementById("speedMeta");
+const pitchShiftEl = document.getElementById("pitchShift");
+const loopDurationEl = document.getElementById("loopDuration");
 const statusText = document.getElementById("statusText");
 const dirText = document.getElementById("dirText");
 const fileInput = document.getElementById("fileInput");
 const sampleName = document.getElementById("sampleName");
 const btnMicSample = document.getElementById("btnMicSample");
+const loopLengthEl = document.getElementById("loopLength");
+const pathSummaryEl = document.getElementById("pathSummary");
+const sprocketCountEl = document.getElementById("sprocketCount");
+const headDistanceRange = document.getElementById("headDistanceRange");
+const headDistanceVal = document.getElementById("headDistanceVal");
+const headDelaySummary = document.getElementById("headDelaySummary");
+const feedbackRange = document.getElementById("feedbackRange");
+const feedbackVal = document.getElementById("feedbackVal");
+const headDelayEl = document.getElementById("headDelay");
+const wowBiasEl = document.getElementById("wowBias");
 
 function updateTransportUI() {
   btnPlay.dataset.state = playing && !reverseMode ? "active" : "";
@@ -160,11 +226,12 @@ btnStop.addEventListener("click", () => {
 });
 
 speedRange.addEventListener("input", () => {
-  playbackRate = parseFloat(speedRange.value);
-  speedVal.textContent = playbackRate.toFixed(2);
+  speedIPS = parseFloat(speedRange.value);
+  playbackRate = speedIPS / REFERENCE_SPEED_IPS;
   if (sourceNode) {
     sourceNode.playbackRate.value = playbackRate;
   }
+  updateTapePhysics();
 });
 
 fileInput.addEventListener("change", async (e) => {
@@ -287,11 +354,57 @@ if (btnMicSample) {
   });
 }
 
+if (headDistanceRange) {
+  headDistanceRange.addEventListener("input", () => {
+    headDistanceInches = parseFloat(headDistanceRange.value);
+    updateTapePhysics();
+  });
+}
+
+if (feedbackRange) {
+  feedbackRange.addEventListener("input", () => {
+    updateFeedbackGain();
+  });
+}
+
 const svg = document.getElementById("cassetteSVG");
 const leftReel = document.getElementById("leftReel");
 const rightReel = document.getElementById("rightReel");
 const tapePathEl = document.getElementById("tapePath");
 const sprocketLayer = document.getElementById("sprocketLayer");
+const headLayer = document.getElementById("headLayer");
+
+function createHeadMarker(label) {
+  if (!headLayer) return null;
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.classList.add("head-marker");
+
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("r", "9");
+  g.appendChild(circle);
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.textContent = label;
+  g.appendChild(text);
+
+  headLayer.appendChild(g);
+  return g;
+}
+
+function positionHeadMarker(marker, point) {
+  if (!marker) return;
+  if (!point) {
+    marker.style.display = "none";
+    return;
+  }
+  marker.style.display = "";
+  marker.setAttribute("transform", `translate(${point.x},${point.y})`);
+}
+
+if (headLayer) {
+  recordHeadMarker = createHeadMarker("R");
+  playHeadMarker = createHeadMarker("P");
+}
 
 let sprockets = [
   { x: 275, y: 130, fixed: true },
@@ -326,17 +439,199 @@ function redrawTapePath() {
     .filter((s) => !s.fixed)
     .sort((a, b) => a.x - b.x);
 
-  const full = [
-    sprockets.find((s) => s.x === 275 && s.y === 130),
-    ...core,
-    sprockets.find((s) => s.x === 525 && s.y === 130),
-  ];
+  const left = sprockets.find((s) => s.x === 275 && s.y === 130);
+  const right = sprockets.find((s) => s.x === 525 && s.y === 130);
 
-  const pts = full.map((p) => `${p.x},${p.y}`).join(" ");
+  const full = [left, ...core, right].filter(Boolean);
+
+  currentPathPoints = full.map((p) => ({ x: p.x, y: p.y }));
+
+  const pts = currentPathPoints.map((p) => `${p.x},${p.y}`).join(" ");
   tapePathEl.setAttribute("points", pts);
+  updateTapePhysics();
 }
 
 redrawTapePath();
+
+function computePathLength(points) {
+  if (!points || points.length < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    total += Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  return total;
+}
+
+function describeLength(inches) {
+  if (!inches || Number.isNaN(inches)) return "0.0 in";
+  const rounded = inches.toFixed(1);
+  if (inches >= 24) {
+    const feet = Math.floor(inches / 12);
+    const remainder = inches % 12;
+    return `${rounded} in (${feet}' ${remainder.toFixed(1)}\")`;
+  }
+  return `${rounded} in`;
+}
+
+function getPointAtInches(inches) {
+  if (!currentPathPoints.length) return null;
+  const totalPx = computePathLength(currentPathPoints);
+  if (totalPx === 0) return currentPathPoints[0];
+  const targetPx = Math.min(Math.max(inches * PX_PER_INCH, 0), totalPx);
+  let accum = 0;
+  for (let i = 0; i < currentPathPoints.length - 1; i += 1) {
+    const start = currentPathPoints[i];
+    const end = currentPathPoints[i + 1];
+    const seg = Math.hypot(end.x - start.x, end.y - start.y);
+    if (accum + seg >= targetPx) {
+      const t = seg === 0 ? 0 : (targetPx - accum) / seg;
+      return {
+        x: start.x + (end.x - start.x) * t,
+        y: start.y + (end.y - start.y) * t,
+      };
+    }
+    accum += seg;
+  }
+  return currentPathPoints[currentPathPoints.length - 1];
+}
+
+function updateHeadMarkers() {
+  if (!recordHeadMarker || !playHeadMarker || !currentPathPoints.length) {
+    positionHeadMarker(recordHeadMarker, null);
+    positionHeadMarker(playHeadMarker, null);
+    return;
+  }
+
+  const recordPoint = getPointAtInches(recordHeadOffsetInches);
+  const playPoint = getPointAtInches(recordHeadOffsetInches + headDistanceInches);
+  positionHeadMarker(recordHeadMarker, recordPoint);
+  positionHeadMarker(playHeadMarker, playPoint);
+}
+
+function updateSpeedUI() {
+  if (speedVal) {
+    speedVal.textContent = speedIPS.toFixed(2);
+  }
+  if (speedMeta) {
+    speedMeta.textContent = `${playbackRate.toFixed(2)}× ref`;
+  }
+  if (pitchShiftEl) {
+    const semis = 12 * Math.log2(Math.max(playbackRate, 0.001));
+    const formatted = semis >= 0 ? `+${semis.toFixed(1)}` : semis.toFixed(1);
+    pitchShiftEl.textContent = formatted;
+  }
+}
+
+function updateHeadDelayNode() {
+  if (echoDelay) {
+    const clamped = Math.max(0, Math.min(29, headDelaySeconds));
+    echoDelay.delayTime.value = clamped;
+  }
+}
+
+function updateFeedbackGain() {
+  if (!feedbackRange) return;
+  const value = parseFloat(feedbackRange.value);
+  if (feedbackVal) {
+    feedbackVal.textContent = `${Math.round(value * 100)}%`;
+  }
+  if (echoFeedback) {
+    echoFeedback.gain.value = value;
+  }
+  if (wetGain) {
+    wetGain.gain.value = 0.25 + value * 0.55;
+  }
+}
+
+function updateSignalColor() {
+  if (highCut) {
+    const ratio = Math.max(playbackRate, 0.001);
+    const target = 8000 * Math.pow(ratio, 0.65);
+    highCut.frequency.value = Math.max(1500, Math.min(12000, target));
+  }
+}
+
+function updateWowFlutter() {
+  if (!wowGain) return;
+  const guideBonus = Math.max(0, sprockets.length - 2) * 0.0008;
+  const lengthBonus = loopLengthInches > 0 ? Math.min(0.003, (loopLengthInches / 120) * 0.0015) : 0;
+  const newDepth = BASE_WOW_DEPTH + guideBonus + lengthBonus;
+  wowGain.gain.value = newDepth;
+  if (wowBiasEl) {
+    wowBiasEl.textContent = `${(newDepth / BASE_WOW_DEPTH).toFixed(1)}×`;
+  }
+  if (wowOsc) {
+    const speedFactor = speedIPS / REFERENCE_SPEED_IPS;
+    const guideFactor = Math.max(0, sprockets.length - 2) * 0.08;
+    wowOsc.frequency.value = 0.6 + guideFactor + (1 - speedFactor) * 0.4;
+  }
+}
+
+function updateTapePhysics() {
+  updateSpeedUI();
+
+  const totalPx = computePathLength(currentPathPoints);
+  loopLengthInches = totalPx / PX_PER_INCH;
+  if (!Number.isFinite(loopLengthInches)) {
+    loopLengthInches = 0;
+  }
+
+  const usableLength = Math.max(0, loopLengthInches - MIN_HEAD_GAP_IN);
+  recordHeadOffsetInches = Math.min(RECORD_HEAD_OFFSET_IN, usableLength);
+
+  const maxHeadDistance = Math.max(
+    0,
+    loopLengthInches - recordHeadOffsetInches - MIN_HEAD_GAP_IN
+  );
+
+  if (headDistanceRange) {
+    headDistanceRange.max = maxHeadDistance.toFixed(2);
+    headDistanceRange.disabled = maxHeadDistance <= 0.01;
+  }
+
+  if (maxHeadDistance <= 0.01) {
+    headDistanceInches = 0;
+  } else if (headDistanceInches > maxHeadDistance) {
+    headDistanceInches = maxHeadDistance;
+  }
+
+  if (headDistanceRange && !Number.isNaN(headDistanceInches)) {
+    headDistanceRange.value = headDistanceInches.toFixed(2);
+  }
+
+  loopDurationSeconds = loopLengthInches > 0 && speedIPS > 0 ? loopLengthInches / speedIPS : 0;
+  headDelaySeconds = headDistanceInches > 0 && speedIPS > 0 ? headDistanceInches / speedIPS : 0;
+
+  if (loopDurationEl) {
+    loopDurationEl.textContent = loopDurationSeconds.toFixed(2);
+  }
+  if (loopLengthEl) {
+    loopLengthEl.textContent = describeLength(loopLengthInches);
+  }
+  if (pathSummaryEl) {
+    pathSummaryEl.textContent = `${describeLength(loopLengthInches)} • ${loopDurationSeconds.toFixed(2)} s`;
+  }
+  if (sprocketCountEl) {
+    sprocketCountEl.textContent = String(sprockets.length);
+  }
+  if (headDistanceVal) {
+    headDistanceVal.textContent = headDistanceInches.toFixed(1);
+  }
+  if (headDelaySummary) {
+    headDelaySummary.textContent = `${headDelaySeconds.toFixed(2)} s`;
+  }
+  if (headDelayEl) {
+    headDelayEl.textContent = headDelaySeconds.toFixed(2);
+  }
+
+  updateHeadDelayNode();
+  updateFeedbackGain();
+  updateSignalColor();
+  updateWowFlutter();
+  updateHeadMarkers();
+}
 
 let dragging = null;
 

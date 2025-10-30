@@ -56,8 +56,7 @@ let toneCutHz = DEFAULT_TONE_CUT_HZ;
 let flutterAmount = 1;
 let tapeDotElements = [];
 let tapeDotOffsets = [];
-let pathSegmentLengths = [];
-let pathCumulativeLengths = [];
+let pathSamplePoints = [];
 
 function makeSaturationCurve(amount = 2.0, n = 1024) {
   const curve = new Float32Array(n);
@@ -469,8 +468,10 @@ if (headLayer) {
 }
 
 let sprockets = [
-  { id: "leftReel", x: 275, y: 130, locked: true },
-  { id: "rightReel", x: 525, y: 130, locked: true },
+  { id: "leftReel", x: 270, y: 150, locked: true, wrapRadius: 58 },
+  { id: "upperGuide", x: 390, y: 90, locked: false, wrapRadius: 22 },
+  { id: "lowerGuide", x: 390, y: 210, locked: false, wrapRadius: 22 },
+  { id: "rightReel", x: 530, y: 150, locked: true, wrapRadius: 58 },
 ];
 
 let lastTime = null;
@@ -544,6 +545,116 @@ function animateReels(ts) {
 
 requestAnimationFrame(animateReels);
 
+function clampRadius(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+function generateSmoothLoop(points) {
+  const entries = points.map((pt) => ({
+    x: pt.x,
+    y: pt.y,
+    radius: clampRadius(pt.wrapRadius ?? 18, 6, 90),
+  }));
+
+  const len = entries.length;
+  if (len < 2) {
+    return "";
+  }
+
+  const instructions = [];
+
+  for (let i = 0; i < len; i += 1) {
+    const prev = entries[(i - 1 + len) % len];
+    const curr = entries[i];
+    const next = entries[(i + 1) % len];
+
+    const vIn = { x: curr.x - prev.x, y: curr.y - prev.y };
+    const vOut = { x: next.x - curr.x, y: next.y - curr.y };
+    const lenIn = Math.hypot(vIn.x, vIn.y);
+    const lenOut = Math.hypot(vOut.x, vOut.y);
+
+    if (lenIn < 0.01 || lenOut < 0.01) {
+      instructions.push({ type: "line", point: { x: curr.x, y: curr.y } });
+      continue;
+    }
+
+    const inUnit = { x: vIn.x / lenIn, y: vIn.y / lenIn };
+    const outUnit = { x: vOut.x / lenOut, y: vOut.y / lenOut };
+
+    let dot = inUnit.x * outUnit.x + inUnit.y * outUnit.y;
+    dot = Math.max(-0.9999, Math.min(0.9999, dot));
+    let angle = Math.acos(dot);
+    if (!Number.isFinite(angle)) angle = Math.PI;
+
+    if (angle < 0.05 || Math.abs(Math.PI - angle) < 0.05) {
+      instructions.push({ type: "line", point: { x: curr.x, y: curr.y } });
+      continue;
+    }
+
+    const rawRadius = clampRadius(curr.radius, 4, 120);
+    const maxRadius = Math.min(lenIn, lenOut) / 2.2;
+    const radius = clampRadius(Math.min(rawRadius, maxRadius), 4, 120);
+
+    const tanFactor = Math.tan(angle / 2);
+    if (Math.abs(tanFactor) < 0.001) {
+      instructions.push({ type: "line", point: { x: curr.x, y: curr.y } });
+      continue;
+    }
+
+    const maxCut = Math.min(lenIn, lenOut) * 0.48;
+    let cutLen = radius / tanFactor;
+    cutLen = clampRadius(cutLen, 4, maxCut);
+
+    const start = {
+      x: curr.x - inUnit.x * cutLen,
+      y: curr.y - inUnit.y * cutLen,
+    };
+    const end = {
+      x: curr.x + outUnit.x * cutLen,
+      y: curr.y + outUnit.y * cutLen,
+    };
+
+    const cross = inUnit.x * outUnit.y - inUnit.y * outUnit.x;
+    const sweep = cross < 0 ? 0 : 1;
+
+    instructions.push({
+      type: "arc",
+      start,
+      end,
+      radius,
+      sweep,
+    });
+  }
+
+  let path = "";
+  for (let i = 0; i < instructions.length; i += 1) {
+    const instr = instructions[i];
+    if (instr.type === "line") {
+      if (!path) {
+        path = `M ${instr.point.x.toFixed(2)} ${instr.point.y.toFixed(2)}`;
+      } else {
+        path += ` L ${instr.point.x.toFixed(2)} ${instr.point.y.toFixed(2)}`;
+      }
+      continue;
+    }
+
+    const { start, end, radius, sweep } = instr;
+    if (!path) {
+      path = `M ${start.x.toFixed(2)} ${start.y.toFixed(2)}`;
+    } else {
+      path += ` L ${start.x.toFixed(2)} ${start.y.toFixed(2)}`;
+    }
+    path += ` A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 0 ${sweep} ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
+  }
+
+  if (path) {
+    path += " Z";
+  }
+
+  return path;
+}
+
 function redrawTapePath() {
   const left = getLeftReel();
   const right = getRightReel();
@@ -555,16 +666,7 @@ function redrawTapePath() {
 
   currentPathPoints = ordered.map((p) => ({ x: p.x, y: p.y }));
 
-  if (ordered.length >= 2) {
-    let pathData = `M ${ordered[0].x} ${ordered[0].y}`;
-    for (let i = 1; i < ordered.length; i += 1) {
-      pathData += ` L ${ordered[i].x} ${ordered[i].y}`;
-    }
-    pathData += " Z";
-    currentPathData = pathData;
-  } else {
-    currentPathData = "";
-  }
+  currentPathData = ordered.length >= 2 ? generateSmoothLoop(ordered) : "";
 
   if (tapeBasePath) {
     tapeBasePath.setAttribute("d", currentPathData);
@@ -585,20 +687,28 @@ function redrawTapePath() {
 redrawTapePath();
 
 function refreshPathMetrics() {
-  pathSegmentLengths = [];
-  pathCumulativeLengths = [0];
+  pathSamplePoints = [];
   tapeTotalLengthPx = 0;
-  if (!currentPathPoints.length) {
+
+  if (!tapeBasePath || !currentPathData) {
     return;
   }
 
-  for (let i = 0; i < currentPathPoints.length; i += 1) {
-    const start = currentPathPoints[i];
-    const end = currentPathPoints[(i + 1) % currentPathPoints.length];
-    const segLen = Math.hypot(end.x - start.x, end.y - start.y);
-    pathSegmentLengths.push(segLen);
-    tapeTotalLengthPx += segLen;
-    pathCumulativeLengths.push(tapeTotalLengthPx);
+  try {
+    tapeTotalLengthPx = tapeBasePath.getTotalLength();
+  } catch (err) {
+    tapeTotalLengthPx = 0;
+    return;
+  }
+
+  const total = Math.max(tapeTotalLengthPx, 0);
+  const sampleCount = Math.max(16, Math.min(420, Math.round(total / 6)));
+
+  for (let i = 0; i < sampleCount; i += 1) {
+    const ratio = i / sampleCount;
+    const length = ratio * total;
+    const point = tapeBasePath.getPointAtLength(length);
+    pathSamplePoints.push({ length, x: point.x, y: point.y });
   }
 }
 
@@ -614,33 +724,31 @@ function describeLength(inches) {
 }
 
 function getPointAtInches(inches) {
-  if (!currentPathPoints.length || tapeTotalLengthPx <= 0) return null;
+  if (!tapeBasePath || tapeTotalLengthPx <= 0) return null;
 
   let targetPx = (inches * PX_PER_INCH) % tapeTotalLengthPx;
   if (targetPx < 0) targetPx += tapeTotalLengthPx;
 
-  for (let i = 0; i < pathSegmentLengths.length; i += 1) {
-    const segLen = pathSegmentLengths[i];
-    const segStart = pathCumulativeLengths[i];
-    const segEnd = pathCumulativeLengths[i + 1];
-    if (targetPx <= segEnd || i === pathSegmentLengths.length - 1) {
-      const start = currentPathPoints[i];
-      const end = currentPathPoints[(i + 1) % currentPathPoints.length];
-      const t = segLen === 0 ? 0 : (targetPx - segStart) / segLen;
-      return {
-        x: start.x + (end.x - start.x) * t,
-        y: start.y + (end.y - start.y) * t,
-      };
-    }
+  try {
+    const point = tapeBasePath.getPointAtLength(targetPx);
+    return { x: point.x, y: point.y };
+  } catch (err) {
+    if (!pathSamplePoints.length) return null;
+    const closest = pathSamplePoints.reduce((best, entry) => {
+      const diff = Math.abs(entry.length - targetPx);
+      if (!best || diff < best.diff) {
+        return { diff, point: { x: entry.x, y: entry.y } };
+      }
+      return best;
+    }, null);
+    return closest ? closest.point : null;
   }
-
-  return currentPathPoints[currentPathPoints.length - 1];
 }
 
 function updatePlayheadTracer() {
   if (!playheadTracer) return;
 
-  if (!currentPathPoints.length || loopLengthInches <= 0) {
+  if (!currentPathData || loopLengthInches <= 0) {
     playheadTracer.style.opacity = "0";
     return;
   }
@@ -660,104 +768,6 @@ function updatePlayheadTracer() {
     playheadTracer.style.opacity = "0";
     return;
   }
-  if (toneCutRange && parseFloat(toneCutRange.value) !== toneCutHz) {
-    toneCutRange.value = toneCutHz.toString();
-  }
-  if (highPass) {
-    highPass.frequency.value = toneCutHz;
-  }
-}
-
-function updateSignalColor() {
-  if (highCut) {
-    const ratio = Math.max(playbackRate, 0.001);
-    const target = 8000 * Math.pow(ratio, 0.65);
-    highCut.frequency.value = Math.max(1500, Math.min(12000, target));
-  }
-}
-
-function updateWowFlutter() {
-  if (!wowGain) return;
-  const guideBonus = Math.max(0, sprockets.length - 2) * 0.0008;
-  const lengthBonus = loopLengthInches > 0 ? Math.min(0.003, (loopLengthInches / 120) * 0.0015) : 0;
-  const newDepth = BASE_WOW_DEPTH + guideBonus + lengthBonus;
-  wowGain.gain.value = newDepth;
-  if (wowBiasEl) {
-    wowBiasEl.textContent = `${(newDepth / BASE_WOW_DEPTH).toFixed(1)}×`;
-  }
-  if (wowOsc) {
-    const speedFactor = speedIPS / REFERENCE_SPEED_IPS;
-    const guideFactor = Math.max(0, sprockets.length - 2) * 0.08;
-    wowOsc.frequency.value = 0.6 + guideFactor + (1 - speedFactor) * 0.4;
-  }
-  const depthRatio = newDepth / BASE_WOW_DEPTH;
-  if (tapeMotionPath) {
-    const width = 4 * Math.min(1.6, Math.max(0.7, depthRatio));
-    tapeMotionPath.setAttribute("stroke-width", width.toFixed(2));
-  }
-  if (tapeActivePath) {
-    const activeWidth = 5 * Math.min(1.5, Math.max(0.8, depthRatio));
-    tapeActivePath.setAttribute("stroke-width", activeWidth.toFixed(2));
-    tapeActivePath.style.opacity = Math.min(1, 0.6 + (depthRatio - 1) * 0.25);
-  }
-}
-
-function updateTapePhysics() {
-  updateSpeedUI();
-
-  const prevLength = loopLengthInches || 0;
-  const totalPx = computePathLength(currentPathPoints);
-  tapeTotalLengthPx = totalPx;
-  loopLengthInches = totalPx / PX_PER_INCH;
-  if (!Number.isFinite(loopLengthInches)) {
-    loopLengthInches = 0;
-  }
-
-  if (tapeMotionPath) {
-    const segments = Math.max(currentPathPoints.length, 1);
-    const dashA = Math.max(18, Math.min(150, (tapeTotalLengthPx / segments) * 0.45));
-    const dashB = dashA * 0.7;
-    tapeDashSpacing = dashA + dashB;
-    tapeDashOffset = ((tapeDashOffset % tapeDashSpacing) + tapeDashSpacing) % tapeDashSpacing;
-    tapeMotionPath.setAttribute(
-      "stroke-dasharray",
-      `${dashA.toFixed(2)} ${dashB.toFixed(2)}`
-    );
-    tapeMotionPath.setAttribute("stroke-dashoffset", tapeDashOffset.toFixed(2));
-  }
-
-  if (loopLengthInches > 0 && prevLength > 0) {
-    const normalized = ((tapeTravelInches % prevLength) + prevLength) % prevLength;
-    tapeTravelInches = (normalized / prevLength) * loopLengthInches;
-  } else if (loopLengthInches <= 0) {
-    tapeTravelInches = 0;
-  }
-
-  const usableLength = Math.max(0, loopLengthInches - MIN_HEAD_GAP_IN);
-  recordHeadOffsetInches = Math.min(RECORD_HEAD_OFFSET_IN, usableLength);
-
-  const maxHeadDistance = Math.max(
-    0,
-    loopLengthInches - recordHeadOffsetInches - MIN_HEAD_GAP_IN
-  );
-
-  if (headDistanceRange) {
-    headDistanceRange.max = maxHeadDistance.toFixed(2);
-    headDistanceRange.disabled = maxHeadDistance <= 0.01;
-  }
-
-  if (maxHeadDistance <= 0.01) {
-    headDistanceInches = 0;
-  } else if (headDistanceInches > maxHeadDistance) {
-    headDistanceInches = maxHeadDistance;
-  }
-
-  if (headDistanceRange && !Number.isNaN(headDistanceInches)) {
-    headDistanceRange.value = headDistanceInches.toFixed(2);
-  }
-
-  loopDurationSeconds = loopLengthInches > 0 && speedIPS > 0 ? loopLengthInches / speedIPS : 0;
-  headDelaySeconds = headDistanceInches > 0 && speedIPS > 0 ? headDistanceInches / speedIPS : 0;
 
   playheadTracer.setAttribute("cx", point.x.toFixed(2));
   playheadTracer.setAttribute("cy", point.y.toFixed(2));
@@ -777,7 +787,7 @@ function rebuildMotionDots() {
     tapeDotsGroup.removeChild(tapeDotsGroup.firstChild);
   }
 
-  if (!currentPathPoints.length || loopLengthInches <= 0) {
+  if (!currentPathData || loopLengthInches <= 0) {
     return;
   }
 
@@ -845,7 +855,7 @@ function updateFlutterUI() {
 }
 
 function updateHeadMarkers() {
-  if (!recordHeadMarker || !playHeadMarker || !currentPathPoints.length) {
+  if (!recordHeadMarker || !playHeadMarker || !currentPathData) {
     positionHeadMarker(recordHeadMarker, null);
     positionHeadMarker(playHeadMarker, null);
     return;
@@ -858,7 +868,7 @@ function updateHeadMarkers() {
 }
 
 function updateActiveTapeSegment() {
-  if (!tapeActivePath || !currentPathPoints.length || !currentPathData) {
+  if (!tapeActivePath || !currentPathData) {
     if (tapeActivePath) {
       tapeActivePath.setAttribute("stroke-dasharray", "0 1");
     }
@@ -909,7 +919,7 @@ function updateSpeedUI() {
     speedVal.textContent = speedIPS.toFixed(2);
   }
   if (speedMeta) {
-    speedMeta.textContent = `${playbackRate.toFixed(2)}× ref`;
+    speedMeta.textContent = `${speedIPS.toFixed(2)} ips`;
   }
   if (pitchShiftEl) {
     const semis = 12 * Math.log2(Math.max(playbackRate, 0.001));
@@ -1060,7 +1070,8 @@ function updateTapePhysics() {
     pathSummaryEl.textContent = `${describeLength(loopLengthInches)} • ${loopDurationSeconds.toFixed(2)} s`;
   }
   if (sprocketCountEl) {
-    sprocketCountEl.textContent = String(sprockets.length);
+    const guideCount = Math.max(0, sprockets.length - 2);
+    sprocketCountEl.textContent = String(guideCount);
   }
   if (headDistanceVal) {
     headDistanceVal.textContent = headDistanceInches.toFixed(1);
@@ -1089,7 +1100,8 @@ function createSprocketNode(sp) {
   g.dataset.type = sp.id || "guide";
 
   const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  circ.setAttribute("r", "10");
+  const nodeRadius = clampRadius((sp.wrapRadius ?? 18) * 0.22 + 6, 8, 20);
+  circ.setAttribute("r", nodeRadius.toFixed(1));
   circ.setAttribute("class", "sprocket-body");
 
   g.appendChild(circ);
@@ -1148,6 +1160,7 @@ btnAddSprocket.addEventListener("click", () => {
     x: 400 + (Math.random() * 80 - 40),
     y: 150 + (Math.random() * 40 - 20),
     locked: false,
+    wrapRadius: 18,
   };
   sprockets.push(sp);
   rebuildSprocketLayer();
